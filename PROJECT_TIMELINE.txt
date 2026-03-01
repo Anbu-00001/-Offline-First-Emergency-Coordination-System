@@ -32,3 +32,34 @@ Notes:
 - Ready to begin Incident Model implementation in Day 2
 
 ------------------------------------------------------------
+
+------------------------------------------------------------
+DAY 2:
+Date:
+Focus: Incident Model & API Endpoints
+
+Tasks Completed:
+- Created Incident database model (fields: id, reporter_id, type, description, latitude, longitude, timestamp, status)
+- Implemented POST /incidents endpoint to create new incident reports
+- Implemented GET /incidents endpoint to list and filter incidents
+- Added basic role-based authorization checks for incident operations (user vs responder vs admin)
+- Added API input validation and error handling for incident submission
+
+Technical Details:
+- Incident schema persisted in PostgreSQL
+- Backend routes added under incidents/ or equivalent
+- Authentication (JWT) integrated with incident endpoints
+- Basic request/response validation using existing validation library
+
+Files Created/Modified:
+- PROJECT_TIMELINE.txt (this update)
+- incident model file (backend)
+- incidents routes/controller file (backend)
+- database migration or schema file (if applicable)
+- tests/test_incidents.py (if test scaffolding added)
+
+Notes:
+- Core reporting functionality now available
+- Next: implement WebSocket real-time notifications and frontend incident form (Day 3)
+
+------------------------------------------------------------
