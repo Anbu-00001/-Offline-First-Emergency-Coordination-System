@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: openrescue_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-openrescue}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openrescue_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-openrescue_db}
+    volumes:
+      - openrescue_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: openrescue_redis
+    restart: always
+    volumes:
+      - openrescue_redisdata:/data
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: 
+      context: ./backend
+    container_name: openrescue_backend
+    restart: always
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DB_USER=${POSTGRES_USER:-openrescue}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-openrescue_pass}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_DB:-openrescue_db}
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  discovery:
+    build:
+      context: ./discovery
+    container_name: openrescue_discovery
+    restart: always
+    network_mode: "host"
+
+volumes:
+  openrescue_pgdata:
+  openrescue_redisdata:
