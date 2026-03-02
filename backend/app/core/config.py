@@ -16,7 +16,13 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://redis:6379/0"
     
+    # JWT Auth
     SECRET_KEY: str = "DEV_SECRET_KEY"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # DB URL override
+    DATABASE_URL: str | None = None
 
     class Config:
         env_file = ".env"
