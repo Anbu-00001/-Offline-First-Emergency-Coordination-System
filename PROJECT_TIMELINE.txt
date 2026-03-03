@@ -108,3 +108,57 @@ Notes:
 - Ready to proceed with Incident integration and WebSocket real-time system (Day 4)
 
 ------------------------------------------------------------
+
+------------------------------------------------------------
+DAY 4:
+Date:
+Focus: Incident Domain, Automatic Responder Assignment & Real-Time Notification System
+
+Tasks Completed:
+- Extended Incident model with priority, assignment tracking, status enum expansion, and geo-coordinates (float latitude/longitude)
+- Implemented Responder model with availability tracking and workload management
+- Created full Incident CRUD endpoints (POST /incidents, GET /incidents, PATCH /incidents/{id})
+- Implemented offline-first batch sync endpoint (POST /sync/incidents) with deduplication and idempotent merge logic
+- Developed Haversine-based nearest-responder allocation algorithm
+- Integrated transactional assignment using SELECT FOR UPDATE to prevent race conditions
+- Built in-process event bus for backend domain events
+- Implemented async notification queue with retry mechanism
+- Added WebSocket endpoint (/ws/alerts) for real-time broadcast of incident lifecycle events
+- Achieved full test coverage for Day 4 modules (20 tests passing)
+
+Technical Details:
+- Haversine formula used for distance-based responder scoring
+- Assignment scoring considers distance + workload weight
+- Database-level row locking ensures safe concurrent assignment
+- Offline sync supports client-side queued incident reconciliation
+- WebSocket broadcast architecture connected via internal event bus
+- Async notification queue processes events non-blocking
+- Coordinate validation enforced at schema level
+- Clean separation: models, schemas, services, events, API routes
+
+Files Created/Modified:
+- app/models/incident.py
+- app/models/responder.py
+- app/schemas/incident.py
+- app/schemas/responder.py
+- app/api/routes/incidents.py
+- app/api/routes/sync.py
+- app/api/routes/ws.py
+- app/services/assignment.py
+- app/services/notification_queue.py
+- app/core/events.py
+- tests/test_incidents.py
+- requirements.txt
+- PROJECT_TIMELINE.txt (this update)
+
+Commit Reference:
+- ef80cc8 → feat(backend): add incidents, responder assignment, websocket notifications (Day 4)
+
+Notes:
+- Backend now supports complete emergency reporting lifecycle
+- Real-time notification infrastructure operational
+- Offline-first synchronization logic implemented
+- Concurrency-safe responder assignment established
+- Foundation ready for frontend integration and offline UI sync (Day 5)
+
+------------------------------------------------------------
