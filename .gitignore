@@ -56,3 +56,8 @@ yarn.lock
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+
+# Flutter mobile app
+mobile_app/build/
+mobile_app/.dart_tool/
+mobile_app/.idea/
