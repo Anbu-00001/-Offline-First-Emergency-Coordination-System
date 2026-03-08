@@ -38,6 +38,22 @@ If you need to bypass mDNS (e.g., CI, or running on an Emulator where mDNS propa
     ```
    *(Note: `10.0.2.2` is the special Android Emulator alias to `127.0.0.1` on your host machine. iOS uses `127.0.0.1`.)*
 
+## Development Helpers (ADB Reverse Proxy)
+
+When running on an Android emulator, resolving `127.0.0.1` points to the emulator itself, not your host machine where the backend is running.
+To seamlessly bridge this gap without changing code or editing config files constantly:
+
+1.  We use `adb reverse tcp:8000 tcp:8000` to map the emulator's port 8000 to the host's port 8000.
+2.  Use the included helper script to set this up automatically:
+    ```bash
+    # From the repo root layer:
+    ./scripts/start_dev_environment.sh
+    # or directly:
+    ./scripts/dev_backend_proxy.sh
+    ```
+    This script will check if the backend is healthy, optionally start it if needed (using `.venv_openrescue`), and then run the `adb reverse` command.
+3.  *Note:* If you are deploying to a physical device on your network, `adb reverse` will map via USB, but for wireless debugging or untethered testing, ensure your `base_url` points to your machine's LAN IP (e.g., `192.168.1.100`) in `assets/config.json`.
+
 ## Running the App
 
 Run the app safely on any active device or emulator. The Day-8 milestone is cross-platform capable.
