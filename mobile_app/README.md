@@ -1,17 +1,57 @@
-# mobile_app
+# OpenRescue Mobile App
 
-A new Flutter project.
+This is the Day-8 Flutter mobile client for OpenRescue.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+*   **MapLibre Offline-Capable Map:** Displays mobile maps via MapLibre, supporting both remote Dev tile fallback and local MBTiles (via assets/tiles).
+*   **mDNS Discovery:** Automatically scans `_openrescue._tcp.local` to find the backend server seamlessly on a local network.
+*   **Robust API Client:** Uses Dio with exponential backoff and retry strategy for all requests (`/health`, `/auth/login`, `/incidents`, `/sync/incidents`).
+*   **WebSocket Messaging:** Includes an auto-reconnecting WebSocket client with a local DB store-and-forward mechanism.
+*   **Local DB & Sync:** Implements Drift/SQLite for local-first persistence. The Sync queue processes background updates reliably.
+*   **Secure Auth Storage:** Employs `flutter_secure_storage` to keep JWT securely encrypted on devices.
+*   **Clean Architecture:** Organizes under `core/`, `models/`, `data/`, and `features/`.
 
-A few resources to get you started if this is your first Flutter project:
+## Prerequisites & Backend Setup
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+1.  Make sure you start the backend first (see `backend/README.md` in the OpenRescue repository).
+2.  Start the backend using uvicorn:
+    ```bash
+    cd ../backend
+    source ../.venv_openrescue/bin/activate
+    alembic upgrade head
+    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ```
+3.  Ensure the mDNS advertiser is running via the custom Python scripts (or within the app) on `8000`.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Local Dev Configuration
+
+The app will prefer mDNS discovery when resolving the backend address.
+If you need to bypass mDNS (e.g., CI, or running on an Emulator where mDNS propagation is tricky), you can override the base URL via config.
+
+1.  Copy `assets/config.example.json` to `assets/config.json`.
+2.  Set your desired `base_url`:
+    ```json
+    {
+      "base_url": "http://10.0.2.2:8000"
+    }
+    ```
+   *(Note: `10.0.2.2` is the special Android Emulator alias to `127.0.0.1` on your host machine. iOS uses `127.0.0.1`.)*
+
+## Running the App
+
+Run the app safely on any active device or emulator. The Day-8 milestone is cross-platform capable.
+
+1.  Launch your emulator using available scripts (e.g., `Scripts/run_emulator.sh`) or manually via Android Studio/Xcode.
+2.  Run Flutter:
+    ```bash
+    cd mobile_app
+    flutter run -d emulator-5554
+    ```
+
+## Acceptance Criteria
+
+1.  **Map Display & Incident Loading:** Ensure `MapScreen` shows a MapLibre map and rendering markers from Local DB.
+2.  **Config Discovery:** Logs will display if the base URL was pulled via mDNS, config.json fallback, or localhost defaults.
+3.  **Peer Messaging:** Accessible via Map map action icon. Tests sending/receiving via WS protocol and SyncQueue.
+4.  **No Backend Changes:** Strictly isolated to `mobile_app/*` folder.
