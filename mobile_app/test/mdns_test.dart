@@ -8,16 +8,16 @@ void main() {
     // In a production app, the socket could be injected for full testability.
     
     // Stub behavior
-    bool _isDiscovered = false;
+    bool isDiscovered = false;
     
     Future<String?> simulateDiscovery() async {
       await Future.delayed(const Duration(milliseconds: 100));
-      _isDiscovered = true;
+      isDiscovered = true;
       return 'http://127.0.0.1:8000';
     }
     
     final result = await simulateDiscovery();
     expect(result, 'http://127.0.0.1:8000');
-    expect(_isDiscovered, isTrue);
+    expect(isDiscovered, isTrue);
   });
 }

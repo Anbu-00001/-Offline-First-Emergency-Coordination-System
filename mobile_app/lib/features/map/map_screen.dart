@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import 'dart:math';
 
 import '../../core/config.dart';

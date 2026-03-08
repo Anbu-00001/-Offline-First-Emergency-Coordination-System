@@ -46,6 +46,7 @@ dependencies:
   provider: ^6.1.5+1
   json_annotation: ^4.11.0
 
+  path: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
