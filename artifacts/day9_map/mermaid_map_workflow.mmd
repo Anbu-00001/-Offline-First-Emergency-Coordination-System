@@ -1,0 +1,15 @@
+graph TD
+    A[MapScreen<br>MapLibre Map Control] --> B{MapService<br>resolveTileUrl}
+    B -->|MBTiles exists| C[MBTilesTileServer<br>shelf + sqlite3<br>localhost:auto-port]
+    B -->|MBTiles absent| D[Remote Tile URL<br>config.json or OSM fallback]
+    C --> E[Local SQLite<br>MBTiles tiles table<br>TMS Y-flip]
+    E --> F[HTTP Response<br>image/png bytes]
+    F --> A
+    D --> G[flutter_cache_manager<br>File-based tile cache]
+    G --> A
+    A --> H[IncidentRepository<br>watchIncidents stream]
+    H --> I[Client-side Clustering]
+    I --> J[MapLibre Symbols<br>Markers + Cluster badges]
+    J --> A
+    A -->|Tap marker| K[Bottom Sheet<br>View / Assign / Navigate]
+    A -->|Long press| L[Create Incident Form<br>Pre-filled coordinates]

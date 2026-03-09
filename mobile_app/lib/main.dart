@@ -8,6 +8,7 @@ import 'core/ws_service.dart';
 import 'data/database.dart';
 import 'data/repositories/incident_repository.dart';
 import 'features/map/map_screen.dart';
+import 'features/map/map_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +23,7 @@ void main() async {
   final db = AppDatabase();
   final incidentRepo = IncidentRepository(db, apiClient);
   final wsService = WsService(baseUrl, authService, db);
+  final mapService = MapService();
 
   runApp(
     MultiProvider(
@@ -32,6 +34,7 @@ void main() async {
         Provider<AppDatabase>.value(value: db),
         Provider<IncidentRepository>.value(value: incidentRepo),
         Provider<WsService>.value(value: wsService),
+        Provider<MapService>.value(value: mapService),
       ],
       child: const OpenRescueApp(),
     ),

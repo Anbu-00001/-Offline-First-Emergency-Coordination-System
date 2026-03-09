@@ -1,0 +1,22 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 93.0.0 (97.0.0 available)
+  analyzer 10.0.1 (11.0.0 available)
++ flutter_cache_manager 3.4.1
++ http_methods 1.1.1
+  meta 1.17.0 (1.18.1 available)
++ rxdart 0.28.0
+  shelf 1.4.2 (from transitive dependency to direct dependency)
++ shelf_router 1.1.4
++ sqflite 2.4.2
++ sqflite_android 2.4.2+3
++ sqflite_common 2.5.6
++ sqflite_darwin 2.4.2
++ sqflite_platform_interface 2.4.0
+  sqlite3 3.1.6 (from transitive dependency to direct dependency) (3.1.7 available)
++ synchronized 3.4.0
++ uuid 4.5.3
+  win32 5.15.0 (6.0.0 available)
+Changed 13 dependencies!
+5 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.

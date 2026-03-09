@@ -1,0 +1,19 @@
+ M mobile_app/README.md
+ M mobile_app/assets/config.example.json
+ M mobile_app/lib/core/config.dart
+ M mobile_app/lib/features/map/map_screen.dart
+ M mobile_app/lib/main.dart
+ M mobile_app/macos/Flutter/GeneratedPluginRegistrant.swift
+ M mobile_app/pubspec.lock
+ M mobile_app/pubspec.yaml
+?? artifacts/day9_map/
+?? mobile_app/assets/config.json
+?? mobile_app/assets/map_style.json
+?? mobile_app/lib/features/map/map_service.dart
+?? mobile_app/lib/features/map/mbtiles_tile_server.dart
+?? mobile_app/test/map_screen_widget_test.dart
+?? mobile_app/test/mbtiles_server_test.dart
+?? scripts/flutter_doctor_collect.sh
+?? scripts/prepare_mbtiles_sample.sh
+?? scripts/run_docs_creator.sh
+?? scripts/week2_full_check.sh

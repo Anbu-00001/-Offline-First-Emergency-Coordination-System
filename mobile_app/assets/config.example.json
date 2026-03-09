@@ -1,3 +1,5 @@
 {
-    "base_url": "http://192.168.1.100:8000"
+    "base_url": "http://192.168.1.100:8000",
+    "backend_tile_url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "tile_style_url": null
 }
