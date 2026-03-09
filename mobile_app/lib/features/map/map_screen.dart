@@ -514,8 +514,8 @@ class _MapScreenState extends State<MapScreen> {
                     return FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
-                        initialCenter: const LatLng(0, 0),
-                        initialZoom: 2.0,
+                        initialCenter: const LatLng(20.5937, 78.9629),
+                        initialZoom: 4,
                         onPositionChanged: (position, hasGesture) {
                           final newZoom = position.zoom;
                           if ((newZoom - _currentZoom).abs() > 0.5) {
@@ -534,12 +534,9 @@ class _MapScreenState extends State<MapScreen> {
                       children: [
                         TileLayer(
                           urlTemplate: _tileUrl!,
-                          userAgentPackageName: 'org.openrescue.app',
+                          userAgentPackageName: 'org.openrescue.mobile',
                           maxZoom: 19,
-                          tileBuilder: (context, tileWidget, tile) {
-                            // Tile loaded successfully
-                            return tileWidget;
-                          },
+                          tileProvider: NetworkTileProvider(),
                         ),
                         MarkerLayer(
                           markers: _buildMarkers(),
