@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 import 'dart:math';
+import 'dart:async';
 
-
+import '../../core/map/map_diagnostics.dart';
 import '../../data/repositories/incident_repository.dart';
 import '../../models/models.dart' as models;
 import '../messaging/messaging_screen.dart';
@@ -36,6 +37,8 @@ class _MapScreenState extends State<MapScreen> {
   bool _mapReady = false;
   String? _tileUrl;
   bool _tileUrlResolved = false;
+  bool _tilesLoading = true;
+  Timer? _tileLoadTimer;
 
   /// Cluster radius in degrees — adjusts with zoom level.
   double get _clusterRadiusDeg {
@@ -54,13 +57,29 @@ class _MapScreenState extends State<MapScreen> {
     _initTileUrl();
   }
 
+  @override
+  void dispose() {
+    _tileLoadTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _initTileUrl() async {
     final mapService = context.read<MapService>();
+    debugPrint('MapScreen: Resolving tile URL...');
     final url = await mapService.resolveTileUrl();
+    debugPrint('MapScreen: Tile URL resolved: $url');
+
     if (mounted) {
       setState(() {
         _tileUrl = url;
         _tileUrlResolved = true;
+      });
+
+      // Start a 3-second timer to show loading banner if tiles still haven't loaded
+      _tileLoadTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted && _tilesLoading) {
+          setState(() {}); // Trigger rebuild to show the banner
+        }
       });
     }
   }
@@ -71,6 +90,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _onMapCreated(MapLibreMapController controller) {
+    debugPrint('MapScreen: Map created');
     _mapController = controller;
 
     _mapController!.onSymbolTapped.add((Symbol symbol) {
@@ -85,11 +105,18 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _onStyleLoaded() {
+    debugPrint('MapScreen: Style loaded successfully');
     _mapReady = true;
+    if (mounted) {
+      setState(() {
+        _tilesLoading = false;
+      });
+    }
+    _tileLoadTimer?.cancel();
     _refreshMarkers();
   }
 
-  void _onCameraIdle() async {
+  void _onCameraIdle() {
     if (_mapController == null) return;
     final cameraPos = _mapController!.cameraPosition;
     if (cameraPos != null) {
@@ -159,7 +186,6 @@ class _MapScreenState extends State<MapScreen> {
           {'id': cluster.first.id},
         );
       } else {
-        // Cluster marker showing count
         await _mapController!.addSymbol(
           SymbolOptions(
             geometry: LatLng(cluster.lat, cluster.lon),
@@ -188,7 +214,7 @@ class _MapScreenState extends State<MapScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) {
+      builder: (ctx) {
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -206,7 +232,7 @@ class _MapScreenState extends State<MapScreen> {
               ),
               const SizedBox(height: 12),
               Text('Incident: ${incident.type}',
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: Theme.of(ctx).textTheme.titleLarge),
               const SizedBox(height: 8),
               _buildDetailRow(Icons.flag, 'Status', incident.status),
               _buildDetailRow(Icons.priority_high, 'Priority', incident.priority),
@@ -218,17 +244,17 @@ class _MapScreenState extends State<MapScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _buildActionButton(Icons.visibility, 'View', () {
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Viewing incident details')));
                   }),
                   _buildActionButton(Icons.assignment_ind, 'Assign', () {
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Assign responder')));
                   }),
                   _buildActionButton(Icons.navigation, 'Navigate', () {
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                     _mapController?.animateCamera(
                       CameraUpdate.newLatLngZoom(
                           LatLng(incident.lat, incident.lon), 15),
@@ -352,9 +378,82 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _centerOnMyLocation() {
-    // Default center or last known position
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(const LatLng(0, 0), 2),
+    );
+  }
+
+  /// Show debug panel with tile diagnostics.
+  void _showDebugPanel() {
+    final summary = MapDiagnostics.getSummary();
+    final logs = MapDiagnostics.getLogEntries();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.5,
+          maxChildSize: 0.85,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('🔧 Map Debug Panel',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  ...summary.entries.map((e) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 120,
+                              child: Text('${e.key}:',
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                            ),
+                            Expanded(
+                              child: Text(e.value,
+                                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11)),
+                            ),
+                          ],
+                        ),
+                      )),
+                  const Divider(height: 24),
+                  const Text('Logs',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  if (logs.isEmpty)
+                    const Text('No log entries yet',
+                        style: TextStyle(color: Colors.grey, fontSize: 12))
+                  else
+                    ...logs.reversed.take(20).map((log) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 1),
+                          child: Text(log,
+                              style: const TextStyle(fontFamily: 'monospace', fontSize: 10)),
+                        )),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -365,29 +464,37 @@ class _MapScreenState extends State<MapScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Text('OpenRescue Map'),
-            if (mapService.isUsingMBTiles) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.withAlpha(50),
-                  borderRadius: BorderRadius.circular(4),
+        title: GestureDetector(
+          onLongPress: _showDebugPanel,
+          child: Row(
+            children: [
+              const Text('OpenRescue Map'),
+              if (mapService.isUsingMBTiles) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withAlpha(50),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('OFFLINE',
+                      style: TextStyle(fontSize: 10, color: Colors.green,
+                          fontWeight: FontWeight.bold)),
                 ),
-                child: const Text('OFFLINE',
-                    style: TextStyle(fontSize: 10, color: Colors.green,
-                        fontWeight: FontWeight.bold)),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.my_location),
             onPressed: _centerOnMyLocation,
             tooltip: 'My Location',
+          ),
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: _showDebugPanel,
+            tooltip: 'Debug Panel',
           ),
           IconButton(
             icon: const Icon(Icons.message),
@@ -399,31 +506,78 @@ class _MapScreenState extends State<MapScreen> {
         ],
       ),
       body: !_tileUrlResolved
-          ? const Center(child: CircularProgressIndicator())
-          : StreamBuilder<List<models.Incident>>(
-              stream: repo.watchIncidents(),
-              builder: (context, streamSnapshot) {
-                if (streamSnapshot.hasData) {
-                  _incidents = streamSnapshot.data!;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _refreshMarkers();
-                  });
-                }
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Resolving tile source...'),
+                ],
+              ),
+            )
+          : Stack(
+              children: [
+                StreamBuilder<List<models.Incident>>(
+                  stream: repo.watchIncidents(),
+                  builder: (context, streamSnapshot) {
+                    if (streamSnapshot.hasData) {
+                      _incidents = streamSnapshot.data!;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _refreshMarkers();
+                      });
+                    }
 
-                return MapLibreMap(
-                  styleString: _buildStyleJson(_tileUrl!),
-                  onMapCreated: _onMapCreated,
-                  onStyleLoadedCallback: _onStyleLoaded,
-                  initialCameraPosition: const CameraPosition(
-                    target: LatLng(0, 0),
-                    zoom: 2.0,
+                    return MapLibreMap(
+                      styleString: _buildStyleJson(_tileUrl!),
+                      onMapCreated: _onMapCreated,
+                      onStyleLoadedCallback: _onStyleLoaded,
+                      initialCameraPosition: const CameraPosition(
+                        target: LatLng(0, 0),
+                        zoom: 2.0,
+                      ),
+                      myLocationEnabled: false,
+                      onMapLongClick: _onMapLongPress,
+                      onCameraIdle: _onCameraIdle,
+                      trackCameraPosition: true,
+                    );
+                  },
+                ),
+                // Loading overlay banner
+                if (_tilesLoading && _tileUrlResolved)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      color: Colors.orange.withAlpha(220),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 16, height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Tiles loading… (source: ${context.read<MapService>().fallbackMode})',
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.bug_report, color: Colors.white, size: 18),
+                            onPressed: _showDebugPanel,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  myLocationEnabled: true,
-                  onMapLongClick: _onMapLongPress,
-                  onCameraIdle: _onCameraIdle,
-                  trackCameraPosition: true,
-                );
-              },
+              ],
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openCreateIncidentForm(),
@@ -536,7 +690,7 @@ class _CreateIncidentFormState extends State<_CreateIncidentForm> {
               );
               await repo.createIncident(dto);
 
-              if (mounted) {
+              if (context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Incident created & queued for sync')));

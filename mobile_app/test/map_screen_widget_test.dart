@@ -13,7 +13,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() {
   testWidgets('MapScreen constructs and renders without error', (WidgetTester tester) async {
-    // Set up mock values for secure storage
     FlutterSecureStorage.setMockInitialValues({});
 
     final db = AppDatabase.memory();
@@ -41,20 +40,18 @@ void main() {
       ),
     );
 
-    // The MapScreen should at minimum render without throwing
-    // The map widget itself may not render without native libraries,
-    // but the scaffold and app bar should be present.
     await tester.pump(const Duration(milliseconds: 100));
 
-    // Verify some basic UI elements
+    // Verify basic UI elements
     expect(find.text('OpenRescue Map'), findsOneWidget);
     expect(find.byType(Scaffold), findsOneWidget);
     expect(find.byIcon(Icons.add_location_alt), findsOneWidget);
     expect(find.byIcon(Icons.message), findsOneWidget);
     expect(find.byIcon(Icons.my_location), findsOneWidget);
+    expect(find.byIcon(Icons.bug_report), findsOneWidget);
   });
 
-  testWidgets('MapScreen shows loading indicator initially', (WidgetTester tester) async {
+  testWidgets('MapScreen shows loading state initially', (WidgetTester tester) async {
     FlutterSecureStorage.setMockInitialValues({});
 
     final db = AppDatabase.memory();
@@ -82,7 +79,8 @@ void main() {
       ),
     );
 
-    // Initially should show loading while tile URL resolves
+    // Initially should show loading
     expect(find.byType(Scaffold), findsOneWidget);
+    expect(find.text('OpenRescue Map'), findsOneWidget);
   });
 }
