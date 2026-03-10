@@ -514,8 +514,14 @@ class _MapScreenState extends State<MapScreen> {
                     return FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
-                        initialCenter: const LatLng(20.5937, 78.9629),
-                        initialZoom: 4,
+                        initialCenter: indiaCenter,
+                        initialZoom: indiaDefaultZoom,
+                        minZoom: 4,
+                        maxZoom: 18,
+                        // Restrict panning so map center stays within India bounds
+                        cameraConstraint: CameraConstraint.containCenter(
+                          bounds: indiaBounds,
+                        ),
                         onPositionChanged: (position, hasGesture) {
                           final newZoom = position.zoom;
                           if ((newZoom - _currentZoom).abs() > 0.5) {

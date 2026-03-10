@@ -9,11 +9,43 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:latlong2/latlong.dart';
+import 'package:flutter_map/flutter_map.dart';
+
 import '../../core/map/map_diagnostics.dart';
 import 'mbtiles_tile_server.dart';
 
 /// Hard fallback tile URL — always valid, FOSS-compliant.
 const _kOsmFallbackUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+// ---------------------------------------------------------------------------
+// India geographic bounds — used to restrict map view to India by default.
+// These are additive constants; removing them reverts to world view.
+// ---------------------------------------------------------------------------
+
+/// Southernmost latitude of India bounding box.
+const double indiaSouth = 6.5546079;
+
+/// Westernmost longitude of India bounding box.
+const double indiaWest = 68.1113787;
+
+/// Northernmost latitude of India bounding box.
+const double indiaNorth = 35.6745457;
+
+/// Easternmost longitude of India bounding box.
+const double indiaEast = 97.395561;
+
+/// Approximate geographic center of India.
+const LatLng indiaCenter = LatLng(22.3511148, 78.6677428);
+
+/// Default zoom level showing all of India.
+const double indiaDefaultZoom = 5.0;
+
+/// Bounding box for India — used as maxBounds / cameraConstraint.
+final LatLngBounds indiaBounds = LatLngBounds(
+  const LatLng(indiaSouth, indiaWest),
+  const LatLng(indiaNorth, indiaEast),
+);
 
 /// Service that manages offline tile serving via MBTiles and tile URL resolution.
 ///

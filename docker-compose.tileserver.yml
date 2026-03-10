@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  tileserver:
+    image: klokantech/tileserver-gl:latest
+    container_name: openrescue_tileserver
+    ports:
+      - "${TILESERVER_PORT:-8080}:80"
+    volumes:
+      - ./docker/tileserver/data:/data
+    environment:
+      - PORT=80
+    restart: unless-stopped

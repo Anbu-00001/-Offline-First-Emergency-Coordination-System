@@ -419,3 +419,77 @@ Deliverables:
 - offline tile architecture ready for MBTiles integration
 
 ------------------------------------------------------------
+
+------------------------------------------------------------
+DAY 10:
+Date:
+Focus: Dockerized Vector Tile Server & India Map Bounds
+
+Summary:
+Added a Dockerized tileserver-gl service for serving vector MBTiles
+(with rasterized tile output) and restricted the default mobile map
+view and panning to India geographic bounds. All changes are additive
+and non-breaking — removing them reverts to the previous world-view
+behavior.
+
+Major Work Completed:
+
+1. Dockerized Tileserver
+- Created docker-compose.tileserver.yml with klokantech/tileserver-gl
+- Configurable port via TILESERVER_PORT env var (default: 8080)
+- Volumes mount docker/tileserver/data/ for MBTiles files
+
+2. Helper Scripts
+- scripts/prepare_mbtiles_india.sh:
+  Creates data directory, downloads MBTiles if MBTILES_URL is set,
+  otherwise prints instructions for obtaining India MBTiles
+- scripts/start_tileserver.sh:
+  Orchestrates preparation, container startup, health check, and logging
+
+3. India Map Bounds (Mobile)
+- Added geographic constants in map_service.dart:
+  indiaSouth, indiaWest, indiaNorth, indiaEast,
+  indiaCenter, indiaDefaultZoom, indiaBounds
+- Updated MapOptions in map_screen.dart:
+  initialCenter = indiaCenter (22.35°N, 78.67°E)
+  initialZoom = 5.0, minZoom = 4, maxZoom = 18
+  cameraConstraint = CameraConstraint.containCenter(bounds: indiaBounds)
+- Panning restricted to India bounding box by default
+
+4. Tests
+- india_bounds_test.dart: validates bounds constants, center containment,
+  major Indian cities within bounds, foreign cities outside bounds
+
+5. Documentation
+- docs/day10_vector_tiles.md: tile server setup, MBTiles sourcing,
+  verification commands, ADB push for offline testing, config.json usage
+
+Files Created:
+- docker-compose.tileserver.yml
+- docker/tileserver/README.md
+- scripts/prepare_mbtiles_india.sh
+- scripts/start_tileserver.sh
+- docs/day10_vector_tiles.md
+- mobile_app/test/india_bounds_test.dart
+
+Files Modified:
+- mobile_app/lib/features/map/map_service.dart
+- mobile_app/lib/features/map/map_screen.dart
+- .env.example
+- PROJECT_TIMELINE.txt (this update)
+
+Architecture:
+
+Mobile App Tile Resolution (unchanged):
+  MBTiles (on-device) → tileserver-gl (Docker) → OSM fallback
+
+Map View:
+  India center (22.35°N, 78.67°E) → zoom 5 → bounds-restricted panning
+
+Notes:
+- MBTiles files are NOT committed (too large); use prepare_mbtiles_india.sh
+- Tileserver is developer-only; not required for app to function
+- All existing tests, debug panel, and raster fallback remain intact
+- Changes are reversible by removing India constants and MapOptions changes
+
+------------------------------------------------------------
