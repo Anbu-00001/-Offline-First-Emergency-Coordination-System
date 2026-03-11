@@ -8,6 +8,8 @@ services:
       - "${TILESERVER_PORT:-8080}:80"
     volumes:
       - ./docker/tileserver/data:/data
+      - ./docker/tileserver/styles:/styles
+      - ./docker/tileserver/config.json:/data/config.json:ro
     environment:
       - PORT=80
     restart: unless-stopped

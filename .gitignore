@@ -61,3 +61,10 @@ htmlcov/
 mobile_app/build/
 mobile_app/.dart_tool/
 mobile_app/.idea/
+
+# Geospatial data (too large to commit)
+*.mbtiles
+*.osrm
+*.osrm.*
+*.osm.pbf
+docker/osrm/data/

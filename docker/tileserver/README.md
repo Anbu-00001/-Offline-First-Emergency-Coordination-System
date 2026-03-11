@@ -6,8 +6,11 @@ This directory hosts the data for the [tileserver-gl](https://github.com/maptile
 
 ```
 docker/tileserver/
-├── data/           ← Place .mbtiles files here
-│   └── india.mbtiles  (not committed — too large)
+├── config.json         ← tileserver-gl configuration
+├── data/               ← Place .mbtiles files here
+│   └── india.mbtiles   (not committed — too large)
+├── styles/
+│   └── openrescue-style.json  ← Mapbox Style spec (vector layers)
 └── README.md
 ```
 

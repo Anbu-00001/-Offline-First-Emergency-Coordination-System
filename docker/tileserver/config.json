@@ -1,0 +1,23 @@
+{
+  "options": {
+    "paths": {
+      "root": "/data",
+      "styles": "/styles",
+      "mbtiles": "/data"
+    }
+  },
+  "styles": {
+    "openrescue": {
+      "style": "openrescue-style.json",
+      "tilejson": {
+        "type": "overlay",
+        "bounds": [68.11, 6.55, 97.40, 35.67]
+      }
+    }
+  },
+  "data": {
+    "india": {
+      "mbtiles": "india.mbtiles"
+    }
+  }
+}

@@ -18,6 +18,16 @@ import 'mbtiles_tile_server.dart';
 /// Hard fallback tile URL — always valid, FOSS-compliant.
 const _kOsmFallbackUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
+/// Optional tileserver URL from --dart-define=TILESERVER_URL=...
+/// When set, the tile URL resolution chain prefers this server.
+/// Example: --dart-define=TILESERVER_URL=http://10.0.2.2:8080/data/india/{z}/{x}/{y}.png
+const String _kTileserverUrlEnv =
+    String.fromEnvironment('TILESERVER_URL', defaultValue: '');
+
+/// Resolved: null when not configured, otherwise the URL template.
+const String? _kTileserverUrl =
+    _kTileserverUrlEnv == '' ? null : _kTileserverUrlEnv;
+
 // ---------------------------------------------------------------------------
 // India geographic bounds — used to restrict map view to India by default.
 // These are additive constants; removing them reverts to world view.
@@ -54,6 +64,9 @@ final LatLngBounds indiaBounds = LatLngBounds(
 /// 2. Config remote tile URL from config.json `backend_tile_url`
 /// 3. Hard fallback: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 class MapService {
+  /// Expose the configured TILESERVER_URL for debug UI and tests.
+  /// Returns null if not configured via --dart-define.
+  static String? get configuredTileserverUrl => _kTileserverUrl;
   MBTilesTileServer? _tileServer;
   bool _initialized = false;
   String _resolvedTileUrl = _kOsmFallbackUrl; // Never empty!
@@ -272,10 +285,18 @@ class MapService {
   }
 
   /// Get remote fallback tile URL. Never returns empty.
+  /// Priority: TILESERVER_URL (dart-define) → config.json → OSM fallback.
   String _getRemoteFallbackUrl(String? configTileUrl) {
+    // 1. Prefer TILESERVER_URL from --dart-define if set
+    if (_kTileserverUrl != null) {
+      debugPrint('MapService: Using TILESERVER_URL: $_kTileserverUrl');
+      return _kTileserverUrl!;
+    }
+    // 2. Config file tile URL
     if (configTileUrl != null && configTileUrl.isNotEmpty) {
       return configTileUrl;
     }
+    // 3. Hard fallback
     return _kOsmFallbackUrl;
   }
 

@@ -389,6 +389,32 @@ class _MapScreenState extends State<MapScreen> {
                   const Text('🔧 Map Debug Panel',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
+                  // Show TILESERVER_URL config (debug info)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(
+                          width: 120,
+                          child: Text('TILESERVER_URL:',
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                        ),
+                        Expanded(
+                          child: Text(
+                            MapService.configuredTileserverUrl ?? '(not set)',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                              color: MapService.configuredTileserverUrl != null
+                                  ? Colors.green
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   ...summary.entries.map((e) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Row(

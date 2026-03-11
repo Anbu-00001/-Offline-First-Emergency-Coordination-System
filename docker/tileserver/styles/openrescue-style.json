@@ -1,0 +1,181 @@
+{
+  "version": 8,
+  "name": "OpenRescue",
+  "metadata": {
+    "maputnik:renderer": "mlgljs",
+    "openrescue:description": "Minimal FOSS vector tile style for OpenRescue. Requires OpenMapTiles-compatible MBTiles in the tileserver data directory."
+  },
+  "sources": {
+    "openmaptiles": {
+      "type": "vector",
+      "url": "mbtiles://{india}"
+    }
+  },
+  "glyphs": "{fontstack}/{range}.pbf",
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#f0ede9"
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "water",
+      "paint": {
+        "fill-color": "#a0cfdf",
+        "fill-opacity": 0.8
+      }
+    },
+    {
+      "id": "landcover-grass",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "filter": ["==", "class", "grass"],
+      "paint": {
+        "fill-color": "#d4e4bc",
+        "fill-opacity": 0.6
+      }
+    },
+    {
+      "id": "landcover-wood",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "filter": ["==", "class", "wood"],
+      "paint": {
+        "fill-color": "#a8d08d",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "landuse-residential",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landuse",
+      "filter": ["==", "class", "residential"],
+      "paint": {
+        "fill-color": "#e8e0d8",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "building",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "building",
+      "minzoom": 13,
+      "paint": {
+        "fill-color": "#d9d0c9",
+        "fill-opacity": 0.7,
+        "fill-outline-color": "#c0b8af"
+      }
+    },
+    {
+      "id": "road-minor",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "minor", "service"]],
+      "paint": {
+        "line-color": "#ffffff",
+        "line-width": {"stops": [[13, 0.5], [18, 4]]}
+      }
+    },
+    {
+      "id": "road-secondary",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "secondary"]],
+      "paint": {
+        "line-color": "#fefcfa",
+        "line-width": {"stops": [[8, 0.5], [18, 8]]}
+      }
+    },
+    {
+      "id": "road-primary",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "primary"]],
+      "paint": {
+        "line-color": "#f9d29b",
+        "line-width": {"stops": [[6, 0.5], [18, 10]]}
+      }
+    },
+    {
+      "id": "road-trunk",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "trunk"]],
+      "paint": {
+        "line-color": "#f5c46c",
+        "line-width": {"stops": [[6, 0.5], [18, 12]]}
+      }
+    },
+    {
+      "id": "road-motorway",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "motorway"]],
+      "paint": {
+        "line-color": "#e8946b",
+        "line-width": {"stops": [[5, 0.5], [18, 14]]}
+      }
+    },
+    {
+      "id": "admin-boundary",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "boundary",
+      "filter": ["==", "admin_level", 2],
+      "paint": {
+        "line-color": "#9e9cab",
+        "line-width": 1.5,
+        "line-dasharray": [3, 2]
+      }
+    },
+    {
+      "id": "place-city",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "filter": ["==", "class", "city"],
+      "layout": {
+        "text-field": "{name}",
+        "text-size": 14,
+        "text-max-width": 8
+      },
+      "paint": {
+        "text-color": "#333",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5
+      }
+    },
+    {
+      "id": "place-town",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "filter": ["==", "class", "town"],
+      "minzoom": 8,
+      "layout": {
+        "text-field": "{name}",
+        "text-size": 12,
+        "text-max-width": 8
+      },
+      "paint": {
+        "text-color": "#555",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1
+      }
+    }
+  ]
+}

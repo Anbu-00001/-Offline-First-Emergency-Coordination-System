@@ -490,6 +490,95 @@ Notes:
 - MBTiles files are NOT committed (too large); use prepare_mbtiles_india.sh
 - Tileserver is developer-only; not required for app to function
 - All existing tests, debug panel, and raster fallback remain intact
-- Changes are reversible by removing India constants and MapOptions changes
+------------------------------------------------------------
+
+------------------------------------------------------------
+DAY 10 (Update):
+Date:
+Focus: Vector Tile Style, MapLibre Web Demo, OSRM Routing Scaffold & TILESERVER_URL
+
+Summary:
+Extended Day 10 with full vector tile style configuration, a browser-based
+MapLibre GL JS preview, OSRM routing backend scaffolding, and TILESERVER_URL
+support in the mobile app. All changes are additive and FOSS-compliant.
+
+Major Work Completed:
+
+1. Tileserver Style & Config
+- Created docker/tileserver/styles/openrescue-style.json (Mapbox Style v8)
+  Layers: water, landcover, buildings, roads, admin boundaries, place labels
+- Created docker/tileserver/config.json for tileserver-gl
+- Updated docker-compose.tileserver.yml with styles and config volume mounts
+- Style is Maputnik-compatible for visual editing
+
+2. MapLibre Web Demo
+- Created web/maplibre-demo/index.html (standalone developer tool)
+- MapLibre GL JS v4 (BSD-3-Clause license)
+- India-bounded view with vector/raster toggle
+- Auto-fallback to MapLibre public demotiles if tileserver offline
+- No Node.js or build tools required
+
+3. OSRM Routing Scaffolding
+- Created docker/osrm/docker-compose.osrm.yml
+  Official osrm/osrm-backend image, MLD algorithm, port 5000
+- Created scripts/prepare_osrm_india.sh
+  Downloads PBF if OSM_PBF_URL set, runs extract/partition/customize
+  Prints detailed instructions with hardware recommendations if no URL
+- Created scripts/start_osrm.sh
+  Checks for .osrm files, starts container, health-checks, saves logs
+
+4. Mobile TILESERVER_URL Integration
+- Added --dart-define=TILESERVER_URL support in map_service.dart
+- Resolution chain: MBTiles → TILESERVER_URL → config.json → OSM fallback
+- Static getter configuredTileserverUrl for debug UI and tests
+- Debug panel in map_screen.dart shows TILESERVER_URL status
+
+5. Tests
+- Created india_tileserver_test.dart:
+  Verifies configuredTileserverUrl accessibility, OSM fallback,
+  fallbackMode, bounds constants, tileServerPort, isUsingMBTiles
+
+6. Documentation
+- Expanded docs/day10_vector_tiles.md with MapLibre, OSRM, and
+  TILESERVER_URL sections
+- Updated .env.example with OSM_PBF_URL and OSRM_PORT
+- Updated .gitignore for *.mbtiles, *.osrm*, *.osm.pbf, docker/osrm/data/
+
+Files Created:
+- docker/tileserver/styles/openrescue-style.json
+- docker/tileserver/config.json
+- web/maplibre-demo/index.html
+- web/maplibre-demo/README.md
+- docker/osrm/docker-compose.osrm.yml
+- scripts/prepare_osrm_india.sh
+- scripts/start_osrm.sh
+- mobile_app/test/india_tileserver_test.dart
+
+Files Modified:
+- docker-compose.tileserver.yml
+- docker/tileserver/README.md
+- mobile_app/lib/features/map/map_service.dart
+- mobile_app/lib/features/map/map_screen.dart
+- docs/day10_vector_tiles.md
+- .env.example
+- .gitignore
+- PROJECT_TIMELINE.txt (this update)
+
+Architecture:
+
+Tile Resolution (updated):
+  MBTiles (on-device) → TILESERVER_URL → config → OSM fallback
+
+OSRM Routing (new, optional):
+  Client → OSRM Backend (Docker, port 5000) → Processed .osrm data
+
+Web Preview (new):
+  Browser → MapLibre GL JS → tileserver-gl (vector) or OSM CDN (raster)
+
+Notes:
+- No large data files committed (MBTiles, PBF, OSRM data)
+- All new services are optional — existing functionality unchanged
+- Only FOSS images and libraries used (tileserver-gl, osrm-backend, MapLibre)
+- OSRM fully operational once PBF is processed; scripts handle the full flow
 
 ------------------------------------------------------------
