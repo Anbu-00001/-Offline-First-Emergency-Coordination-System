@@ -9,6 +9,8 @@ class AppConfig {
   factory AppConfig() => _instance;
   AppConfig._internal();
 
+  static const String osrmBaseUrl = "http://127.0.0.1:5000";
+
   final MDnsDiscovery _mDnsDiscovery = MDnsDiscovery();
 
   Future<String> resolveBackendBaseUrl() async {

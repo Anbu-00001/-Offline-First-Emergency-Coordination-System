@@ -14,6 +14,8 @@ import '../messaging/messaging_screen.dart';
 import '../prefetch/prefetch_screen.dart';
 import 'map_service.dart';
 import '../../widgets/responder_toggle.dart';
+import '../../controllers/route_controller.dart';
+import '../../services/location_service.dart';
 
 // Temporarily disabled for tile debugging:
 // import 'package:maplibre_gl/maplibre_gl.dart';
@@ -232,11 +234,21 @@ class _MapScreenState extends State<MapScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Assign responder')));
                   }),
-                  _buildActionButton(Icons.navigation, 'Navigate', () {
+                  _buildActionButton(Icons.navigation, 'Navigate', () async {
                     Navigator.pop(ctx);
-                    _mapController.move(
-                      LatLng(incident.lat, incident.lon), 15,
-                    );
+                    final locService = context.read<LocationService>();
+                    final routeController = context.read<RouteController>();
+                    
+                    final start = await locService.getCurrentLocation();
+                    if (start != null) {
+                       routeController.requestRoute(start: start, end: LatLng(incident.lat, incident.lon));
+                    } else {
+                       if (context.mounted) {
+                         ScaffoldMessenger.of(context).showSnackBar(
+                           const SnackBar(content: Text('Could not get current location')),
+                         );
+                       }
+                    }
                   }),
                 ],
               ),
@@ -587,6 +599,22 @@ class _MapScreenState extends State<MapScreen> {
                           userAgentPackageName: 'org.openrescue.mobile',
                           maxZoom: 19,
                           tileProvider: NetworkTileProvider(),
+                        ),
+                        StreamBuilder<List<LatLng>>(
+                          stream: context.read<RouteController>().routeStream,
+                          builder: (context, snapshot) {
+                            final routePoints = snapshot.data ?? [];
+                            return PolylineLayer(
+                              polylines: [
+                                if (routePoints.isNotEmpty)
+                                  Polyline(
+                                    points: routePoints,
+                                    strokeWidth: 4,
+                                    color: Colors.blue,
+                                  ),
+                              ],
+                            );
+                          },
                         ),
                         MarkerLayer(
                           markers: _buildMarkers(),

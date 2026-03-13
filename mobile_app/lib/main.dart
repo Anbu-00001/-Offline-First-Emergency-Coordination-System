@@ -16,7 +16,9 @@ import 'services/tile_prefetch_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/responder_state_service.dart';
 import 'services/location_service.dart';
+import 'services/osrm_service.dart';
 import 'controllers/responder_controller.dart';
+import 'controllers/route_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +54,10 @@ void main() async {
     prefetchService: prefetchService,
   );
 
+  // 5. OSRM and Routing
+  final osrmService = OSRMService();
+  final routeController = RouteController(osrmService);
+
   runApp(
     MultiProvider(
       providers: [
@@ -70,6 +76,8 @@ void main() async {
         Provider<ResponderStateService>.value(value: responderStateService),
         Provider<LocationService>.value(value: locationService),
         Provider<ResponderController>.value(value: responderController),
+        Provider<OSRMService>.value(value: osrmService),
+        Provider<RouteController>.value(value: routeController),
       ],
       child: const OpenRescueApp(),
     ),
