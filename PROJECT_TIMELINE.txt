@@ -734,3 +734,56 @@ Notes:
 No backend changes were introduced. Existing modules such as MapService, MBTilesTileServer, incident_repository, and marker rendering remain unaffected.
 
 ------------------------------------------------------------
+
+DAY 13 — OSRM Routing Integration
+
+Summary:
+Integrated the OSRM routing engine into the OpenRescue mobile application to enable navigation between the responder's current location and an incident location.
+
+Architecture Components Added:
+
+• OSRMService
+  - Responsible for querying the OSRM routing API
+  - Sends HTTP requests to /route/v1/driving endpoint
+  - Parses GeoJSON route geometry
+  - Converts coordinates to List<LatLng> for map rendering
+
+• RouteController
+  - Manages route state for the UI
+  - Exposes Stream<List<LatLng>> routeStream
+  - Requests routes from OSRMService
+  - Emits updated routes for reactive map rendering
+
+• Map Rendering Integration
+  - Added PolylineLayer to flutter_map
+  - Route drawn between tile layer and marker layer
+  - Uses List<LatLng> emitted by RouteController
+
+• Navigation Trigger
+  - "Navigate" button added to incident popup
+  - Retrieves current location via LocationService
+  - Destination uses incident coordinates
+  - Calls RouteController.requestRoute()
+
+Testing & Verification:
+
+• Unit tests implemented in:
+  osrm_service_test.dart
+
+• Tests verify:
+  - route API parsing
+  - coordinate conversion to LatLng
+  - correct handling of empty routes
+
+Verification Results:
+
+flutter analyze → PASS  
+flutter test → PASS  
+Architecture integrity → PASS  
+
+Notes:
+No changes were made to backend services. Existing components including MapService, TilePrefetchService, PrefetchQueue, MBTilesTileServer, and IncidentRepository remain unchanged.
+
+Routing currently targets a configurable OSRM endpoint defined in the mobile configuration.
+
+------------------------------------------------------------
