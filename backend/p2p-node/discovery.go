@@ -20,21 +20,22 @@ type discoveryNotifee struct {
 
 // HandlePeerFound connects to peers discovered via mDNS
 func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	fmt.Printf("mDNS Discovery: Found peer %s\n", pi.ID)
 	// Don't try to connect to ourselves
 	if pi.ID == n.h.ID() {
 		return
 	}
 
+	log.Printf("[Discovery] Peer discovered via mDNS: %s", pi.ID)
+
 	// Connect to the peer
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	
+
 	err := n.h.Connect(ctx, pi)
 	if err != nil {
-		fmt.Printf("mDNS Discovery: Failed connecting to peer %s: %s\n", pi.ID.String(), err)
+		log.Printf("[Discovery] Failed to connect to peer %s: %s", pi.ID.String(), err)
 	} else {
-		fmt.Printf("mDNS Discovery: Automatically connected to peer %s\n", pi.ID.String())
+		log.Printf("[Discovery] Peer connected: %s (addrs: %v)", pi.ID.String(), pi.Addrs)
 	}
 }
 
@@ -44,11 +45,11 @@ func setupDiscovery(h host.Host) error {
 	if s == nil {
 		return fmt.Errorf("failed creating mDNS service")
 	}
-	
+
 	if err := s.Start(); err != nil {
 		return fmt.Errorf("failed starting mDNS service: %v", err)
 	}
-	
-	log.Printf("mDNS Peer Discovery started (service tag: %s)\n", discoveryServiceTag)
+
+	log.Printf("[Discovery] mDNS Peer Discovery started (service tag: %s)\n", discoveryServiceTag)
 	return nil
 }

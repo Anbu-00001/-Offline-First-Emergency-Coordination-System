@@ -5,35 +5,76 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 )
 
 const IncidentTopic = "openrescue.incident"
+const dedupCacheSize = 1000
 
-// IncidentMessage defines the schema for our P2P broadcasts
-type IncidentMessage struct {
-	Type        string  `json:"type"`
-	IncidentID  string  `json:"incident_id"`
-	Lat         float64 `json:"lat"`
-	Lon         float64 `json:"lon"`
-	Priority    string  `json:"priority"`
-	Timestamp   int64   `json:"timestamp"`
-	DeviceID    string  `json:"device_id"`
+// NetworkEnvelope is the standardized message envelope for P2P communication.
+// Designed to be forward-compatible: unknown fields in Payload are preserved.
+type NetworkEnvelope struct {
+	MsgID      string                 `json:"msg_id"`
+	MsgType    string                 `json:"msg_type"`
+	OriginPeer string                 `json:"origin_peer"`
+	Timestamp  int64                  `json:"timestamp"`
+	Payload    map[string]interface{} `json:"payload"`
+}
+
+// dedupCache provides O(1) duplicate detection with bounded memory using a ring buffer.
+type dedupCache struct {
+	mu    sync.RWMutex
+	seen  map[string]bool
+	ring  []string
+	index int
+	size  int
+}
+
+func newDedupCache(size int) *dedupCache {
+	return &dedupCache{
+		seen: make(map[string]bool, size),
+		ring: make([]string, size),
+		size: size,
+	}
+}
+
+// isDuplicate returns true if msgID was already seen; otherwise adds it.
+func (c *dedupCache) isDuplicate(msgID string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.seen[msgID] {
+		return true
+	}
+
+	// Evict oldest entry if ring is full
+	if old := c.ring[c.index]; old != "" {
+		delete(c.seen, old)
+	}
+
+	c.ring[c.index] = msgID
+	c.seen[msgID] = true
+	c.index = (c.index + 1) % c.size
+	return false
 }
 
 type PubSubManager struct {
-	ctx      context.Context
-	ps       *pubsub.PubSub
-	topic    *pubsub.Topic
-	sub      *pubsub.Subscription
-	host     host.Host
-	msgChan  chan IncidentMessage
+	ctx     context.Context
+	ps      *pubsub.PubSub
+	topic   *pubsub.Topic
+	sub     *pubsub.Subscription
+	host    host.Host
+	msgChan chan NetworkEnvelope
+	dedup   *dedupCache
 }
 
 // setupPubSub initializes GossipSub and subscribes to the incident topic
-func setupPubSub(ctx context.Context, h host.Host, msgChan chan IncidentMessage) (*PubSubManager, error) {
+func setupPubSub(ctx context.Context, h host.Host, msgChan chan NetworkEnvelope) (*PubSubManager, error) {
 	// Create a new GossipSub routing instance
 	ps, err := pubsub.NewGossipSub(ctx, h)
 	if err != nil {
@@ -59,6 +100,7 @@ func setupPubSub(ctx context.Context, h host.Host, msgChan chan IncidentMessage)
 		sub:     sub,
 		host:    h,
 		msgChan: msgChan,
+		dedup:   newDedupCache(dedupCacheSize),
 	}
 
 	// Start listening for messages in the background
@@ -73,7 +115,7 @@ func (m *PubSubManager) listenLoop() {
 	for {
 		msg, err := m.sub.Next(m.ctx)
 		if err != nil {
-			log.Printf("Error reading from GossipSub: %s\n", err)
+			log.Printf("[PubSub] Error reading from GossipSub: %s\n", err)
 			return
 		}
 
@@ -82,33 +124,58 @@ func (m *PubSubManager) listenLoop() {
 			continue
 		}
 
-		// Parse the JSON message
-		var incMsg IncidentMessage
-		if err := json.Unmarshal(msg.Data, &incMsg); err != nil {
-			log.Printf("Failed to unmarshal GossipSub message: %s\n", err)
+		// Parse the JSON envelope
+		var envelope NetworkEnvelope
+		if err := json.Unmarshal(msg.Data, &envelope); err != nil {
+			log.Printf("[PubSub] Failed to unmarshal GossipSub message: %s\n", err)
 			continue
 		}
 
-		log.Printf("Received incident broadcast from peer %s: %s\n", msg.ReceivedFrom, incMsg.IncidentID)
+		// Deduplication check
+		if m.dedup.isDuplicate(envelope.MsgID) {
+			log.Printf("[PubSub] Duplicate message ignored: msg_id=%s from peer %s\n", envelope.MsgID, msg.ReceivedFrom)
+			continue
+		}
+
+		log.Printf("[PubSub] Message received: msg_id=%s msg_type=%s from peer %s\n", envelope.MsgID, envelope.MsgType, msg.ReceivedFrom)
 
 		// Forward to the channel for the WebSocket API to pick up
 		select {
-		case m.msgChan <- incMsg:
+		case m.msgChan <- envelope:
 		default:
-			log.Println("Message channel full or blocking, dropping message")
+			log.Println("[PubSub] Message channel full, dropping message")
 		}
 	}
 }
 
-// Broadcast serializes and publishes an incident message
-func (m *PubSubManager) Broadcast(msg IncidentMessage) error {
-	// Ensure the DeviceID is set to our peer ID
-	msg.DeviceID = m.host.ID().String()
+// Broadcast serializes and publishes a network envelope
+func (m *PubSubManager) Broadcast(envelope NetworkEnvelope) error {
+	// Stamp origin_peer with our peer ID
+	envelope.OriginPeer = m.host.ID().String()
 
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message: %w", err)
+	// Generate msg_id if not provided
+	if envelope.MsgID == "" {
+		envelope.MsgID = uuid.New().String()
 	}
 
+	// Set timestamp if not provided
+	if envelope.Timestamp == 0 {
+		envelope.Timestamp = time.Now().Unix()
+	}
+
+	// Default msg_type
+	if envelope.MsgType == "" {
+		envelope.MsgType = "incident_create"
+	}
+
+	// Add to our own dedup cache to prevent echo
+	m.dedup.isDuplicate(envelope.MsgID)
+
+	data, err := json.Marshal(envelope)
+	if err != nil {
+		return fmt.Errorf("failed to marshal envelope: %w", err)
+	}
+
+	log.Printf("[PubSub] Message published: msg_id=%s msg_type=%s\n", envelope.MsgID, envelope.MsgType)
 	return m.topic.Publish(m.ctx, data)
 }

@@ -25,7 +25,7 @@ func main() {
 		log.Fatalf("Failed to create libp2p host: %v", err)
 	}
 	defer host.Close()
-	
+
 	fmt.Printf("P2P Node started with ID: %s\n", host.ID().String())
 	for _, addr := range host.Addrs() {
 		fmt.Printf("Listening on: %s/p2p/%s\n", addr.String(), host.ID().String())
@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// Channel for messages received from GossipSub to be sent to WebSocket clients
-	msgChan := make(chan IncidentMessage, 100)
+	msgChan := make(chan NetworkEnvelope, 100)
 
 	// 3. Setup PubSub (GossipSub)
 	pubSubManager, err := setupPubSub(ctx, host, msgChan)
@@ -57,6 +57,6 @@ func main() {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
-	
+
 	fmt.Println("Shutting down P2P Daemon...")
 }

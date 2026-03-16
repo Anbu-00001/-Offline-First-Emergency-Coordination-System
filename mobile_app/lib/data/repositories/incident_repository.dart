@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import '../../models/models.dart' as domain;
 import '../database.dart' as db;
@@ -118,14 +119,32 @@ class IncidentRepository {
     );
   }
 
+  /// Handles an incoming P2P incident from the network.
+  ///
+  /// Uses the incident_id from the envelope payload as the DB primary key
+  /// to enable DB-level deduplication. If an incident with the same ID already
+  /// exists, the insert is skipped.
   Future<void> _handleIncomingP2PIncident(domain.IncidentCreateDto dto) async {
-    // Basic day-15 integration: instantly insert the gossip message as an incident
-    final p2pId = 'p2p_${DateTime.now().millisecondsSinceEpoch}';
+    // Extract incident_id from envelope metadata (passed through dto.data)
+    final String incidentId = dto.data?['incident_id'] as String? ??
+        'p2p_${DateTime.now().millisecondsSinceEpoch}';
 
-    await _db.into(_db.incidents).insertOnConflictUpdate(
+    // DB-level dedup: check if this incident already exists
+    final existing = await (_db.select(_db.incidents)
+          ..where((t) => t.id.equals(incidentId)))
+        .get();
+
+    if (existing.isNotEmpty) {
+      debugPrint(
+          '[IncidentRepo] Duplicate incident skipped: $incidentId (already in DB)');
+      return;
+    }
+
+    // Insert the new incident
+    await _db.into(_db.incidents).insert(
       db.IncidentsCompanion.insert(
-        id: p2pId,
-        reporter_id: dto.client_id, // Who sent it
+        id: incidentId,
+        reporter_id: dto.client_id,
         type: dto.type,
         lat: dto.lat,
         lon: dto.lon,
@@ -136,5 +155,8 @@ class IncidentRepository {
         updated_at: DateTime.now(),
       ),
     );
+
+    debugPrint(
+        '[IncidentRepo] P2P incident inserted: $incidentId');
   }
 }

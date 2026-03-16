@@ -20,17 +20,18 @@ import 'package:mobile_app/services/routing_service.dart';
 import 'package:mobile_app/controllers/route_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_app/controllers/responder_controller.dart';
-import 'package:mobile_app/features/prefetch/prefetch_controller.dart';
 import 'package:mobile_app/data/db/prefetch_database.dart';
 import 'package:mobile_app/data/tiles_repository.dart';
 import 'package:mobile_app/services/tile_prefetch_service.dart';
+import 'package:mobile_app/services/p2p_service.dart';
 
 Future<Widget> _buildTestApp() async {
   FlutterSecureStorage.setMockInitialValues({});
   final db = AppDatabase.memory();
   final authService = AuthService();
   final apiClient = ApiClient(baseUrl: 'http://test', authService: authService);
-  final incidentRepo = IncidentRepository(db, apiClient);
+  final p2pService = P2PService(hostUrl: 'http://test');
+  final incidentRepo = IncidentRepository(db, apiClient, p2pService);
   final config = AppConfig();
   final wsService = WsService('http://test', authService, db);
   final mapService = MapService();

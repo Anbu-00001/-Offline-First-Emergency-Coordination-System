@@ -22,13 +22,13 @@ var upgrader = websocket.Upgrader{
 type APIServer struct {
 	port          int
 	pubSubManager *PubSubManager
-	msgChan       chan IncidentMessage
+	msgChan       chan NetworkEnvelope
 	clients       map[*websocket.Conn]bool
 	clientsMux    sync.RWMutex
 }
 
 // NewAPIServer creates a new API Server instance
-func NewAPIServer(port int, psm *PubSubManager, msgChan chan IncidentMessage) *APIServer {
+func NewAPIServer(port int, psm *PubSubManager, msgChan chan NetworkEnvelope) *APIServer {
 	return &APIServer{
 		port:          port,
 		pubSubManager: psm,
@@ -48,11 +48,11 @@ func (s *APIServer) Start() error {
 	go s.broadcastLoop() // Loop to read from msgChan and send to all WS clients
 
 	serverAddr := fmt.Sprintf(":%d", s.port)
-	log.Printf("Starting P2P API Server at HTTP/WS %s", serverAddr)
-	
+	log.Printf("[API] Starting P2P API Server at HTTP/WS %s", serverAddr)
+
 	go func() {
 		if err := http.ListenAndServe(serverAddr, mux); err != nil {
-			log.Fatalf("API server failed: %v", err)
+			log.Fatalf("[API] Server failed: %v", err)
 		}
 	}()
 
@@ -60,31 +60,27 @@ func (s *APIServer) Start() error {
 }
 
 // handleBroadcast is the HTTP handler for POST /broadcast
+// Accepts a NetworkEnvelope JSON body and publishes it via GossipSub.
 func (s *APIServer) handleBroadcast(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var inc IncidentMessage
-	if err := json.NewDecoder(r.Body).Decode(&inc); err != nil {
+	var envelope NetworkEnvelope
+	if err := json.NewDecoder(r.Body).Decode(&envelope); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Make sure Type is set correctly (for schema consistency)
-	if inc.Type == "" {
-		inc.Type = "incident_create"
-	}
-
-	// Publish via GossipSub
-	if err := s.pubSubManager.Broadcast(inc); err != nil {
-		log.Printf("Failed to broadcast message: %v\n", err)
+	// Publish via GossipSub (Broadcast fills in msg_id, origin_peer, timestamp if missing)
+	if err := s.pubSubManager.Broadcast(envelope); err != nil {
+		log.Printf("[API] Failed to broadcast message: %v\n", err)
 		http.Error(w, "Failed to broadcast", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("HTTP /broadcast processed: sent incident %s to peers", inc.IncidentID)
+	log.Printf("[API] POST /broadcast processed: msg_id=%s msg_type=%s", envelope.MsgID, envelope.MsgType)
 
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]string{"status": "broadcasted"})
@@ -94,7 +90,7 @@ func (s *APIServer) handleBroadcast(w http.ResponseWriter, r *http.Request) {
 func (s *APIServer) handleEvents(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Failed to upgrade WebSocket: %v", err)
+		log.Printf("[API] Failed to upgrade WebSocket: %v", err)
 		return
 	}
 
@@ -103,16 +99,16 @@ func (s *APIServer) handleEvents(w http.ResponseWriter, r *http.Request) {
 	s.clients[conn] = true
 	s.clientsMux.Unlock()
 
-	log.Printf("New WebSocket client connected: %s", conn.RemoteAddr().String())
+	log.Printf("[API] WebSocket client connected: %s", conn.RemoteAddr().String())
 
-	// Read loop just to handle disconnects (we don't expect messages *from* the client on this WS yet)
+	// Read loop just to handle disconnects
 	go func() {
 		defer func() {
 			s.clientsMux.Lock()
 			delete(s.clients, conn)
 			s.clientsMux.Unlock()
 			conn.Close()
-			log.Printf("WebSocket client disconnected")
+			log.Printf("[API] WebSocket client disconnected: %s", conn.RemoteAddr().String())
 		}()
 		for {
 			if _, _, err := conn.ReadMessage(); err != nil {
@@ -122,22 +118,21 @@ func (s *APIServer) handleEvents(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-// broadcastLoop reads from the p2p input channel and forwards to all connected WebSockets
+// broadcastLoop reads from the p2p input channel and forwards NetworkEnvelopes to all connected WebSockets
 func (s *APIServer) broadcastLoop() {
-	for msg := range s.msgChan {
-		// Serialize
-		data, err := json.Marshal(msg)
+	for envelope := range s.msgChan {
+		// Serialize envelope
+		data, err := json.Marshal(envelope)
 		if err != nil {
-			log.Printf("Failed to marshal WS broadcast message: %v", err)
+			log.Printf("[API] Failed to marshal WS broadcast envelope: %v", err)
 			continue
 		}
 
 		s.clientsMux.RLock()
 		for client := range s.clients {
-			// Write the serialized json message to the websocket client
 			if err := client.WriteMessage(websocket.TextMessage, data); err != nil {
-				log.Printf("Failed to send message to WS client: %v", err)
-				client.Close() // Typically best to close and let the read loop delete it
+				log.Printf("[API] Failed to send message to WS client: %v", err)
+				client.Close()
 			}
 		}
 		s.clientsMux.RUnlock()

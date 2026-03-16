@@ -832,3 +832,78 @@ Implementation Details:
 • Verified successful broadcast pipeline: device A incident → GossipSub → device B database insertion.
 
 ------------------------------------------------------------
+
+DAY 16 — P2P Message Stabilization & Deduplication Layer
+
+Summary:
+Stabilized the P2P messaging system to ensure reliable incident propagation across devices. Introduced a standardized network message envelope, dual-layer deduplication (network + database), an outgoing message queue for offline resilience, and enhanced peer network logging.
+
+Architecture Components Added:
+
+• NetworkEnvelope (Go + Dart)
+  - Standardized message format: msg_id, msg_type, origin_peer, timestamp, payload
+  - Forward-compatible: unknown fields in payload are preserved
+  - Supports future msg_type values (incident_update, incident_resolve)
+
+• Server-Side Dedup Cache (Go daemon)
+  - Ring-buffer based cache in PubSubManager (1000 entries)
+  - O(1) duplicate detection using map + circular buffer
+  - Self-echo prevention for locally broadcast messages
+
+• MessageCache (Flutter)
+  - LRU dedup cache using LinkedHashSet (1000 entries)
+  - Prevents GossipSub loop duplicates at the network layer
+  - Integrated into P2PService WebSocket message handler
+
+• Repository Protection (Flutter)
+  - _handleIncomingP2PIncident uses incident_id from envelope payload as DB primary key
+  - Checks for existing records before insertion
+  - Prevents DB duplicates even if network dedup misses
+
+• Outgoing Message Queue (Flutter)
+  - Messages queued locally when HTTP POST to daemon fails
+  - Queued messages flushed in order upon WebSocket reconnection
+  - Ensures no messages are lost during transient connectivity issues
+
+• Enhanced Logging
+  - Go daemon: [Discovery], [PubSub], [API] prefixed structured logs
+  - Logs peer discovered/connected, message published/received/duplicate
+  - Flutter: [P2P] and [IncidentRepo] debug logs for broadcast/receive/dedup
+
+Files Created:
+- mobile_app/lib/models/network_envelope.dart
+- mobile_app/lib/services/message_cache.dart
+
+Files Modified:
+- backend/p2p-node/pubsub.go (NetworkEnvelope struct, dedup cache)
+- backend/p2p-node/api.go (envelope-aware handlers)
+- backend/p2p-node/main.go (channel type update)
+- backend/p2p-node/discovery.go (enhanced logging)
+- backend/p2p-node/go.mod, go.sum (uuid dependency)
+- mobile_app/lib/services/p2p_service.dart (envelope, dedup, queue)
+- mobile_app/lib/data/repositories/incident_repository.dart (DB dedup)
+- mobile_app/test/map_screen_widget_test.dart (constructor fix)
+- PROJECT_TIMELINE.txt (this update)
+
+Message Flow:
+  Device A creates incident
+    ↓
+  P2PService wraps in NetworkEnvelope (msg_id, payload)
+    ↓
+  POST /broadcast → Go daemon stamps origin_peer
+    ↓
+  GossipSub broadcast to peers
+    ↓
+  Device B Go daemon dedup check → forward to WebSocket
+    ↓
+  Flutter P2PService MessageCache dedup → parse payload
+    ↓
+  IncidentRepository DB-level dedup → insert if new
+    ↓
+  Incident marker appears on map
+
+Verification:
+  Go build → PASS
+  Flutter analyze → PASS (only pre-existing info-level naming warnings)
+
+------------------------------------------------------------
