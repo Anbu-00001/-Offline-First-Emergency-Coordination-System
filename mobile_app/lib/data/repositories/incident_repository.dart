@@ -30,7 +30,7 @@ class IncidentRepository {
   }
 
   Stream<List<domain.Incident>> watchIncidents() {
-    return (_db.select(_db.incidents)..where((t) => t.deleted_flag.equals(false)))
+    return (_db.select(_db.incidents)..where((t) => t.deletedFlag.equals(false)))
         .watch()
         .map((rows) => rows.map((r) => incidentFromDb(r)).toList());
   }
@@ -43,7 +43,7 @@ class IncidentRepository {
   /// Fetches all non-deleted incidents from the local database.
   Future<List<domain.Incident>> getAllIncidents() async {
     final rows = await (_db.select(_db.incidents)
-          ..where((t) => t.deleted_flag.equals(false)))
+          ..where((t) => t.deletedFlag.equals(false)))
         .get();
     return rows.map((r) => incidentFromDb(r)).toList();
   }
@@ -54,15 +54,15 @@ class IncidentRepository {
     // Broadcast immediately to peers
     final incidentToBroadcast = domain.Incident(
       id: localDocId,
-      reporter_id: 'local_user', // This might be pulled from auth/context
+      reporterId: 'local_user', // This might be pulled from auth/context
       type: dto.type,
       lat: dto.lat,
       lon: dto.lon,
       priority: dto.priority,
       status: dto.status,
-      client_id: dto.client_id,
-      sequence_num: dto.sequence_num,
-      updated_at: DateTime.now(),
+      clientId: dto.clientId,
+      sequenceNum: dto.sequenceNum,
+      updatedAt: DateTime.now(),
     );
     _p2pService.broadcastIncident(incidentToBroadcast);
 
@@ -70,25 +70,25 @@ class IncidentRepository {
       await _db.into(_db.incidents).insert(
         db.IncidentsCompanion.insert(
           id: localDocId,
-          reporter_id: 'local_user', // This might be pulled from auth/context
+          reporterId: 'local_user', // This might be pulled from auth/context
           type: dto.type,
           lat: dto.lat,
           lon: dto.lon,
           priority: dto.priority,
-          status_enum: dto.status,
-          client_id: dto.client_id,
-          sequence_num: dto.sequence_num,
-          updated_at: DateTime.now(),
+          statusEnum: dto.status,
+          clientId: dto.clientId,
+          sequenceNum: dto.sequenceNum,
+          updatedAt: DateTime.now(),
         ),
       );
 
       await _db.into(_db.syncQueue).insert(
         db.SyncQueueCompanion.insert(
-          entity_type: 'Incident',
-          entity_id: localDocId,
+          entityType: 'Incident',
+          entityId: localDocId,
           operation: 'CREATE',
           data: jsonEncode(dto.toJson()),
-          sequence_num: dto.sequence_num,
+          sequenceNum: dto.sequenceNum,
           timestamp: DateTime.now(),
         ),
       );
@@ -100,11 +100,11 @@ class IncidentRepository {
     if (pendingChanges.isEmpty) return;
 
     final changes = pendingChanges.map((q) => domain.LocalChange(
-      entity_type: q.entity_type,
-      entity_id: q.entity_id,
+      entityType: q.entityType,
+      entityId: q.entityId,
       operation: q.operation,
       data: jsonDecode(q.data),
-      sequence_num: q.sequence_num,
+      sequenceNum: q.sequenceNum,
       timestamp: q.timestamp,
     )).toList();
 
@@ -163,15 +163,15 @@ class IncidentRepository {
     await _db.into(_db.incidents).insert(
       db.IncidentsCompanion.insert(
         id: incidentId,
-        reporter_id: dto.client_id,
+        reporterId: dto.clientId,
         type: dto.type,
         lat: dto.lat,
         lon: dto.lon,
         priority: dto.priority,
-        status_enum: dto.status,
-        client_id: dto.client_id,
-        sequence_num: dto.sequence_num,
-        updated_at: DateTime.now(),
+        statusEnum: dto.status,
+        clientId: dto.clientId,
+        sequenceNum: dto.sequenceNum,
+        updatedAt: DateTime.now(),
       ),
     );
 
@@ -229,8 +229,8 @@ class IncidentRepository {
           lon: (incMap['lon'] as num?)?.toDouble() ?? 0.0,
           priority: incMap['priority'] as String? ?? 'medium',
           status: incMap['status'] as String? ?? 'new',
-          client_id: incMap['reporter_id'] as String? ?? 'synced_peer',
-          sequence_num: 1,
+          clientId: incMap['reporter_id'] as String? ?? 'synced_peer',
+          sequenceNum: 1,
           data: {'incident_id': incidentId},
         );
 

@@ -1018,3 +1018,39 @@ Verification:
   Flutter analyze → PASS
 
 ------------------------------------------------------------
+
+DAY 18:
+Date:
+Focus: Causal Message Ordering (GossipLog)
+
+Summary:
+Implemented Lamport logical clocks for distributed event ordering and introduced message dependency tracking using `prev_msg_ids`. Built the GossipLog service to store and validate the message DAG. Added a pending queue to handle out-of-order message delivery, resulting in messages being applied only when their dependencies are satisfied. Prevented invalid state transitions in distributed incident updates and established the foundation for causal consistency and future CRDT logic.
+
+Tasks Completed:
+- Implemented Lamport logical clocks for distributed event ordering
+- Introduced message dependency tracking using prev_msg_ids
+- Built GossipLog service to store and validate message DAG
+- Added pending queue to handle out-of-order message delivery
+- Ensured messages are applied only when dependencies are satisfied
+- Prevented invalid state transitions in distributed incident updates
+- Established foundation for causal consistency and future CRDT logic
+
+Technical Details:
+- Go backend extended with GossipLog struct handling log, pending queue, and HEADS tracking
+- Envelope extended with Clock and PrevMsgIDs
+- Dart frontend mirrored GossipLog logic in GossipLogService
+- P2PService routes causal messages (create, resolve) through GossipLog, while bulk syncing runs parallel
+
+Files Created/Modified:
+- backend/p2p-node/gossip_log.go
+- backend/p2p-node/pubsub.go
+- backend/p2p-node/main.go
+- mobile_app/lib/models/network_envelope.dart
+- mobile_app/lib/services/gossip_log_service.dart
+- mobile_app/lib/services/p2p_service.dart
+- mobile_app/test/gossip_log_service_test.dart
+
+Notes:
+- Full system verification (Day 15-18) successfully passed, confirming P2P broadcast, deduplication, sync, and causal consistency.
+
+------------------------------------------------------------
