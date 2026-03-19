@@ -504,7 +504,8 @@ class _MapScreenState extends State<MapScreen> {
   void _centerOnMyLocation() async {
     final locService = context.read<LocationService>();
     final loc = await locService.getCurrentLocation();
-    if (loc != null && mounted) {
+    if (!mounted) return;
+    if (loc != null) {
       _mapController.move(loc, 16.0);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

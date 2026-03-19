@@ -226,5 +226,67 @@ void main() {
       expect(received[1].msgId, 'm2');
       expect(received[2].msgId, 'm3');
     });
+
+    test('Day 19 Integration: Multi-device convergence (A -> B -> C)', () async {
+      final serviceA = GossipLogService();
+      final serviceB = GossipLogService();
+      final serviceC = GossipLogService();
+
+      // A creates 3 incidents
+      final m1 = _makeEnvelope(msgId: 'm1', clock: 1);
+      serviceA.recordSent(m1);
+      final m2 = _makeEnvelope(msgId: 'm2', clock: 2, prevMsgIds: ['m1']);
+      serviceA.recordSent(m2);
+      final m3 = _makeEnvelope(msgId: 'm3', clock: 3, prevMsgIds: ['m2']);
+      serviceA.recordSent(m3);
+
+      expect(serviceA.logSize, 3);
+
+      // A connects to B. B discovers it's missing M1, M2, M3.
+      // B sends head_exchange with empty heads. A sends head_exchange with [m3].
+      final missingInB = serviceB.findMissingMessages(serviceA.getHeads());
+      expect(missingInB, ['m3']);
+
+      // B requests m3. A sends m3.
+      final fetched3 = serviceA.fetchAndSortMessages(['m3']);
+      final depsB = serviceB.receive(fetched3.first);
+      expect(depsB, ['m2']);
+
+      // B requests m2. A sends m2.
+      final fetched2 = serviceA.fetchAndSortMessages(['m2']);
+      final depsB2 = serviceB.receive(fetched2.first);
+      expect(depsB2, ['m1']);
+
+      // B requests m1. A sends m1.
+      final fetched1 = serviceA.fetchAndSortMessages(['m1']);
+      final depsB3 = serviceB.receive(fetched1.first);
+      expect(depsB3, isEmpty);
+
+      // B now has all messages
+      expect(serviceB.logSize, 3);
+      expect(serviceB.getHeads(), ['m3']);
+
+      // B connects to C. C only has m1. 
+      serviceC.receive(m1);
+      final missingInC = serviceC.findMissingMessages(serviceB.getHeads());
+      expect(missingInC, ['m3']);
+
+      // C requests m3, receives from B.
+      final fetchedC3 = serviceB.fetchAndSortMessages(['m3']);
+      final depsC = serviceC.receive(fetchedC3.first);
+      expect(depsC, ['m2']);
+
+      // C requests m2, receives from B.
+      final fetchedC2 = serviceB.fetchAndSortMessages(['m2']);
+      final depsC2 = serviceC.receive(fetchedC2.first);
+      expect(depsC2, isEmpty); // C already had m1. So m2 unblocks m3!
+
+      // C now has all messages
+      expect(serviceC.logSize, 3);
+      expect(serviceC.getHeads(), ['m3']);
+
+      expect(serviceA.getHeads(), serviceB.getHeads());
+      expect(serviceB.getHeads(), serviceC.getHeads());
+    });
   });
 }

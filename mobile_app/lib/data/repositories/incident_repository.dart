@@ -128,7 +128,7 @@ class IncidentRepository {
       });
     } catch (e) {
       // Failed to push (e.g. offline), keeps 'queued'
-      print('Sync failed, will retry later: $e');
+      debugPrint('Sync failed, will retry later: $e');
     }
   }
 

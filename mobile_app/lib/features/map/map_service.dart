@@ -60,7 +60,7 @@ final LatLngBounds indiaBounds = LatLngBounds(
 /// Service that manages offline tile serving via MBTiles and tile URL resolution.
 ///
 /// Fallback chain (never leaves tile URL empty):
-/// 1. Local MBTiles server → http://localhost:<port>/tiles/{z}/{x}/{y}.png
+/// 1. Local MBTiles server → http://localhost:[port]/tiles/{z}/{x}/{y}.png
 /// 2. Config remote tile URL from config.json `backend_tile_url`
 /// 3. Hard fallback: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 class MapService {

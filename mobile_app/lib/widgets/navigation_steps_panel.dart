@@ -80,7 +80,7 @@ class NavigationStepsPanel extends StatelessWidget {
                     : ListView.separated(
                         controller: scrollController,
                         itemCount: steps.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (context, index) => const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final step = steps[index];
                           final distanceStr = step.distance >= 1000
