@@ -144,6 +144,19 @@ class P2PService {
       // Forward the raw envelope for any listeners that want it
       _envelopeStreamController.add(envelope);
 
+      if (envelope.msgType == 'head_exchange') {
+        _handleHeadExchange(envelope);
+        return;
+      }
+      if (envelope.msgType == 'message_request') {
+        _handleMessageRequest(envelope);
+        return;
+      }
+      if (envelope.msgType == 'message_response') {
+        _handleMessageResponse(envelope);
+        return;
+      }
+
       // Day-18: sync_request and sync_response bypass GossipLog.
       // They are bulk state transfer meta-messages, not causal operations.
       if (envelope.msgType == 'sync_request') {
@@ -157,10 +170,113 @@ class P2PService {
 
       // All other message types go through GossipLog for causal ordering.
       // _gossipLogSub will call _routeValidEnvelope when deps are satisfied.
-      _gossipLog.receive(envelope);
+      final missingDeps = _gossipLog.receive(envelope);
+      if (missingDeps.isNotEmpty) {
+        debugPrint('[P2P] MISSING_DETECTED: requesting missing deps $missingDeps');
+        _sendMessageRequest(missingDeps);
+      }
     } catch (e) {
       debugPrint('[P2P] Failed to parse incoming message: $e');
     }
+  }
+
+  void _handleHeadExchange(NetworkEnvelope envelope) {
+    debugPrint('[P2P] HEADS_RECEIVED: from ${envelope.originPeer}');
+    final peerHeads = (envelope.payload['heads'] as List<dynamic>? ?? [])
+        .map((e) => e.toString())
+        .toList();
+
+    final missing = _gossipLog.findMissingMessages(peerHeads);
+    if (missing.isNotEmpty) {
+      debugPrint('[P2P] MISSING_DETECTED: requesting ${missing.length} messages');
+      _sendMessageRequest(missing);
+    }
+  }
+
+  void _handleMessageRequest(NetworkEnvelope envelope) {
+    final requestedIds = (envelope.payload['requested_ids'] as List<dynamic>? ?? [])
+        .map((e) => e.toString())
+        .toList();
+    
+    debugPrint('[P2P] MESSAGE_REQUEST_RECEIVED: for ${requestedIds.length} messages');
+
+    final messagesToSend = _gossipLog.fetchAndSortMessages(requestedIds);
+    if (messagesToSend.isNotEmpty) {
+      _sendMessageResponse(messagesToSend);
+    }
+  }
+
+  void _handleMessageResponse(NetworkEnvelope envelope) {
+    debugPrint('[P2P] MESSAGE_RESPONSE_RECEIVED: from ${envelope.originPeer}');
+    final messagesList = envelope.payload['messages'] as List<dynamic>? ?? [];
+
+    for (final msgData in messagesList) {
+      try {
+        final Map<String, dynamic> msgMap =
+            msgData is Map<String, dynamic>
+                ? msgData
+                : Map<String, dynamic>.from(msgData as Map);
+
+        final msgEnvelope = NetworkEnvelope.fromJson(msgMap);
+        
+        // Add to deduplication cache to prevent re-processing
+        if (_messageCache.isDuplicate(msgEnvelope.msgId)) {
+          continue;
+        }
+
+        // Process through gossip log
+        final missingDeps = _gossipLog.receive(msgEnvelope);
+        
+        if (missingDeps.isNotEmpty) {
+          debugPrint('[P2P] MISSING_DETECTED: requesting missing deps $missingDeps');
+          _sendMessageRequest(missingDeps);
+        }
+      } catch (e) {
+        debugPrint('[P2P] Failed to parse message in response: $e');
+      }
+    }
+  }
+
+  Future<void> _sendMessageRequest(List<String> requestedIds) async {
+    if (requestedIds.isEmpty) return;
+
+    final envelope = NetworkEnvelope(
+      msgId: 'msg_req_${DateTime.now().millisecondsSinceEpoch}',
+      msgType: 'message_request',
+      originPeer: '',
+      timestamp: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      payload: {
+        'requested_ids': requestedIds,
+      },
+    );
+
+    debugPrint('[P2P] MESSAGE_REQUEST_SENT: requesting ids $requestedIds');
+    
+    // Add to our own dedup cache to prevent self-echo
+    _messageCache.isDuplicate(envelope.msgId);
+    
+    await _sendEnvelopeHttp(envelope);
+  }
+
+  Future<void> _sendMessageResponse(List<NetworkEnvelope> messages) async {
+    final payloadMessages = messages.map((m) => m.toJson()).toList();
+
+    final envelope = NetworkEnvelope(
+      msgId: 'msg_resp_${DateTime.now().millisecondsSinceEpoch}',
+      msgType: 'message_response',
+      originPeer: '',
+      timestamp: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      payload: {
+        'messages': payloadMessages,
+      },
+    );
+
+    debugPrint('[P2P] MESSAGE_RESPONSE_SENT: sending ${messages.length} messages');
+    
+    // Add to our own dedup cache to prevent self-echo
+    _messageCache.isDuplicate(envelope.msgId);
+    
+    await _sendEnvelopeHttp(envelope);
   }
 
   /// Routes a causally-validated envelope to the appropriate downstream handler.

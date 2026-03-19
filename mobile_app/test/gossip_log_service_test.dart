@@ -162,5 +162,69 @@ void main() {
       // clock = max(6, 3) + 1 = 7
       expect(service.clock, 7);
     });
+
+    test('Day 19: findMissingMessages correctly identifies unknown peer heads', () async {
+      final m1 = _makeEnvelope(msgId: 'msg_1', clock: 1);
+      service.receive(m1);
+      
+      final missing = service.findMissingMessages(['msg_3', 'msg_1']);
+      expect(missing, ['msg_3']);
+    });
+
+    test('Day 19: receive returns missing dependencies', () async {
+      final m3 = _makeEnvelope(msgId: 'msg_3', clock: 3, prevMsgIds: ['msg_2']);
+      
+      final missingDeps = service.receive(m3);
+      expect(missingDeps, ['msg_2']);
+      expect(service.pendingSize, 1);
+    });
+
+    test('Day 19: fetchAndSortMessages returns topologically sorted messages', () async {
+      final m1 = _makeEnvelope(msgId: 'msg_1', clock: 1);
+      final m2 = _makeEnvelope(msgId: 'msg_2', clock: 2, prevMsgIds: ['msg_1']);
+      final m3 = _makeEnvelope(msgId: 'msg_3', clock: 3, prevMsgIds: ['msg_2']);
+
+      service.receive(m1);
+      service.receive(m2);
+      service.receive(m3);
+
+      // Request in reverse order to ensure sorting works
+      final fetched = service.fetchAndSortMessages(['msg_3', 'msg_2']);
+      expect(fetched.length, 2);
+      expect(fetched[0].msgId, 'msg_2', reason: 'm2 has lower clock, should be first');
+      expect(fetched[1].msgId, 'msg_3', reason: 'm3 has higher clock, should be second');
+    });
+
+    test('Day 19 Integration: Missing message retrieval in causal order', () async {
+      // B starts with M1
+      final m1 = _makeEnvelope(msgId: 'm1', clock: 1);
+      service.receive(m1);
+      await pumpEventQueue();
+      expect(received.length, 1);
+
+      // B detects missing M3 (from head_exchange)
+      final missingFromHeads = service.findMissingMessages(['m3']);
+      expect(missingFromHeads, ['m3']);
+
+      // B receives M3, depends on M2
+      final m3 = _makeEnvelope(msgId: 'm3', clock: 3, prevMsgIds: ['m2']);
+      final missingDeps = service.receive(m3);
+      
+      expect(missingDeps, ['m2']); // B detects missing M2
+      await pumpEventQueue();
+      expect(received.length, 1, reason: 'm3 should be pending');
+
+      // B requests and receives M2
+      final m2 = _makeEnvelope(msgId: 'm2', clock: 2, prevMsgIds: ['m1']);
+      final missingDeps2 = service.receive(m2);
+
+      expect(missingDeps2, isEmpty); // M1 is known
+      await pumpEventQueue();
+
+      // M2 unblocks M3
+      expect(received.length, 3);
+      expect(received[1].msgId, 'm2');
+      expect(received[2].msgId, 'm3');
+    });
   });
 }

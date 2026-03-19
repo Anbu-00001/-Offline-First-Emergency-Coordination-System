@@ -42,6 +42,29 @@ class GossipLogService {
   /// Snapshot of current HEAD message IDs (unmodifiable copy).
   Set<String> get heads => Set.unmodifiable(_heads);
 
+  /// Returns a snapshot of the current HEAD message IDs (messages with no children)
+  List<String> getHeads() => _heads.toList();
+
+  /// Returns peer heads that are missing locally
+  List<String> findMissingMessages(List<String> peerHeads) {
+    return peerHeads.where((h) => !_log.containsKey(h) && !_pending.containsKey(h)).toList();
+  }
+
+  /// Fetches the requested messages and their ancestors if needed, sorted topologically.
+  List<NetworkEnvelope> fetchAndSortMessages(List<String> requestedIds) {
+    final result = <NetworkEnvelope>[];
+    for (final id in requestedIds) {
+      if (_log.containsKey(id)) {
+        result.add(_log[id]!);
+      } else if (_pending.containsKey(id)) {
+        result.add(_pending[id]!);
+      }
+    }
+    // Topological sort by Lamport clock
+    result.sort((a, b) => a.clock.compareTo(b.clock));
+    return result;
+  }
+
   /// Number of messages in the log (applied).
   int get logSize => _log.length;
 
@@ -55,7 +78,9 @@ class GossipLogService {
   ///
   /// Updates the Lamport clock using max(local, received)+1, then either
   /// applies the message immediately (if deps satisfied) or queues it pending.
-  void receive(NetworkEnvelope env) {
+  /// Day-19: Returns a list of missing dependency IDs, if any.
+  List<String> receive(NetworkEnvelope env) {
+    final missingDeps = <String>[];
     // Lamport clock update: max(local, received) + 1
     if (env.clock > _clock) {
       _clock = env.clock;
@@ -68,7 +93,7 @@ class GossipLogService {
 
     // Skip if already known (extra safety beyond P2PService dedup)
     if (_log.containsKey(env.msgId) || _pending.containsKey(env.msgId)) {
-      return;
+      return missingDeps;
     }
 
     if (_canApply(env)) {
@@ -78,7 +103,13 @@ class GossipLogService {
       _pending[env.msgId] = env;
       debugPrint(
           '[GossipLog] MESSAGE_PENDING: msg_id=${env.msgId} waiting for deps=${env.prevMsgIds}');
+      for (final depId in env.prevMsgIds) {
+        if (depId.isNotEmpty && !_log.containsKey(depId) && !_pending.containsKey(depId)) {
+          missingDeps.add(depId);
+        }
+      }
     }
+    return missingDeps;
   }
 
   /// Records a locally-originated (sent) message into the log without emitting
