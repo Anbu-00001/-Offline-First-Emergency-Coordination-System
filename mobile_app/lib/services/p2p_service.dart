@@ -8,6 +8,19 @@ import '../models/network_envelope.dart';
 import 'message_cache.dart';
 import 'gossip_log_service.dart';
 
+/// Represents an active sync session with a specific peer (Day-20)
+class SyncSession {
+  final String peerId;
+  final Set<String> requestedIds = {};
+  final Set<String> receivedIds = {};
+  final Set<String> sentIds = {};
+  int iterationCount = 0;
+  bool syncComplete = false;
+  DateTime? lastRequestTime;
+
+  SyncSession(this.peerId);
+}
+
 /// Maximum number of incidents per sync_response batch to avoid network flooding.
 const int syncBatchSize = 50;
 
@@ -56,7 +69,16 @@ class P2PService {
   /// peer_id → sync_completed (boolean)
   final Map<String, bool> _peerSyncState = {};
 
-  P2PService({required this.hostUrl}) {
+  /// Active sync sessions with peers for Day-20 HEAD-based sync
+  final Map<String, SyncSession> _syncSessions = {};
+  
+  /// Timer for Day-20 retry strategy
+  Timer? _retryTimer;
+  
+  final int port;
+
+  P2PService({required this.hostUrl, this.port = 7000}) {
+    _retryTimer = Timer.periodic(const Duration(milliseconds: 1000), (_) => _checkRetries());
     // Day-18: Subscribe to GossipLog valid messages and route them
     _gossipLogSub = _gossipLog.validMessages.listen((envelope) {
       _routeValidEnvelope(envelope);
@@ -88,7 +110,7 @@ class P2PService {
   /// Connects to the local daemon's WebSocket endpoint for receiving messages
   void connect() {
     final wsBase = hostUrl.replaceFirst('http', 'ws');
-    final wsUrl = Uri.parse('$wsBase:7000/events');
+    final wsUrl = Uri.parse('$wsBase:$port/events');
 
     try {
       _channel = WebSocketChannel.connect(wsUrl);
@@ -173,7 +195,7 @@ class P2PService {
       final missingDeps = _gossipLog.receive(envelope);
       if (missingDeps.isNotEmpty) {
         debugPrint('[P2P] MISSING_DETECTED: requesting missing deps $missingDeps');
-        _sendMessageRequest(missingDeps);
+        _processMissingDeps(envelope.originPeer, missingDeps);
       }
     } catch (e) {
       debugPrint('[P2P] Failed to parse incoming message: $e');
@@ -188,8 +210,78 @@ class P2PService {
 
     final missing = _gossipLog.findMissingMessages(peerHeads);
     if (missing.isNotEmpty) {
-      debugPrint('[P2P] MISSING_DETECTED: requesting ${missing.length} messages');
-      _sendMessageRequest(missing);
+      debugPrint('[P2P] MISSING_DETECTED: requesting ${missing.length} messages (from heads_exchange)');
+      _processMissingDeps(envelope.originPeer, missing);
+    } else {
+      final session = _syncSessions.putIfAbsent(envelope.originPeer, () => SyncSession(envelope.originPeer));
+      if (!session.syncComplete) {
+        session.syncComplete = true;
+        debugPrint('[P2P] SYNC_COMPLETED: No missing messages for ${envelope.originPeer}');
+      }
+    }
+  }
+
+  void _processMissingDeps(String peerId, List<String> missing) {
+    if (missing.isEmpty) return;
+
+    final session = _syncSessions.putIfAbsent(peerId, () => SyncSession(peerId));
+
+    if (session.syncComplete) {
+      // Re-activate if there are new missing messages discovered
+      session.syncComplete = false;
+    }
+
+    if (session.iterationCount >= 10) {
+      debugPrint('[P2P] SYNC_TERMINATED: Max iterations reached for $peerId');
+      session.syncComplete = true;
+      return;
+    }
+
+    final toRequest = <String>[];
+    for (final id in missing) {
+      if (session.requestedIds.contains(id)) {
+        debugPrint('[P2P] REQUEST_SKIPPED_DUPLICATE: $id already requested from $peerId');
+      } else {
+        toRequest.add(id);
+        session.requestedIds.add(id);
+      }
+    }
+
+    if (toRequest.isEmpty) {
+      final pendingToRequest = session.requestedIds.difference(session.receivedIds);
+      if (pendingToRequest.isEmpty) {
+        session.syncComplete = true;
+        debugPrint('[P2P] SYNC_COMPLETED: No new missing messages for $peerId');
+      }
+      return;
+    }
+
+    session.iterationCount++;
+    session.lastRequestTime = DateTime.now();
+    debugPrint('[P2P] SYNC_PROGRESS: Iteration ${session.iterationCount} for $peerId');
+    
+    _sendMessageRequest(toRequest, peerId);
+  }
+
+  void _checkRetries() {
+    final now = DateTime.now();
+    for (final session in _syncSessions.values) {
+      if (!session.syncComplete && session.lastRequestTime != null) {
+        if (now.difference(session.lastRequestTime!) > const Duration(milliseconds: 1000)) {
+          final pendingToRequest = session.requestedIds.difference(session.receivedIds).toList();
+          if (pendingToRequest.isNotEmpty) {
+            if (session.iterationCount >= 10) {
+              debugPrint('[P2P] SYNC_TERMINATED: Max iterations reached for ${session.peerId}');
+              session.syncComplete = true;
+              continue;
+            }
+            session.iterationCount++;
+            session.lastRequestTime = now;
+            debugPrint('[P2P] SYNC_PROGRESS: Iteration ${session.iterationCount} for ${session.peerId} (Retry)');
+            _sendMessageRequest(pendingToRequest, session.peerId);
+          }
+        }
+      }
     }
   }
 
@@ -198,16 +290,31 @@ class P2PService {
         .map((e) => e.toString())
         .toList();
     
-    debugPrint('[P2P] MESSAGE_REQUEST_RECEIVED: for ${requestedIds.length} messages');
+    final peerId = envelope.originPeer;
+    final session = _syncSessions.putIfAbsent(peerId, () => SyncSession(peerId));
+    
+    debugPrint('[P2P] MESSAGE_REQUEST_RECEIVED: for ${requestedIds.length} messages from $peerId');
 
+    // Day-20 Part 7: Topological sort happens inside fetchAndSortMessages
     final messagesToSend = _gossipLog.fetchAndSortMessages(requestedIds);
-    if (messagesToSend.isNotEmpty) {
-      _sendMessageResponse(messagesToSend);
+    
+    // Day-20 Part 6: Deduplicate responses
+    final toSend = <NetworkEnvelope>[];
+    for (final msg in messagesToSend) {
+      if (!session.sentIds.contains(msg.msgId)) {
+        toSend.add(msg);
+        session.sentIds.add(msg.msgId);
+      }
+    }
+
+    if (toSend.isNotEmpty) {
+      _sendMessageResponse(toSend, peerId);
     }
   }
 
   void _handleMessageResponse(NetworkEnvelope envelope) {
     debugPrint('[P2P] MESSAGE_RESPONSE_RECEIVED: from ${envelope.originPeer}');
+    final session = _syncSessions.putIfAbsent(envelope.originPeer, () => SyncSession(envelope.originPeer));
     final messagesList = envelope.payload['messages'] as List<dynamic>? ?? [];
 
     for (final msgData in messagesList) {
@@ -218,6 +325,7 @@ class P2PService {
                 : Map<String, dynamic>.from(msgData as Map);
 
         final msgEnvelope = NetworkEnvelope.fromJson(msgMap);
+        session.receivedIds.add(msgEnvelope.msgId);
         
         // Add to deduplication cache to prevent re-processing
         if (_messageCache.isDuplicate(msgEnvelope.msgId)) {
@@ -229,15 +337,21 @@ class P2PService {
         
         if (missingDeps.isNotEmpty) {
           debugPrint('[P2P] MISSING_DETECTED: requesting missing deps $missingDeps');
-          _sendMessageRequest(missingDeps);
+          _processMissingDeps(envelope.originPeer, missingDeps);
         }
       } catch (e) {
         debugPrint('[P2P] Failed to parse message in response: $e');
       }
     }
+
+    final pendingToRequest = session.requestedIds.difference(session.receivedIds);
+    if (pendingToRequest.isEmpty && !session.syncComplete) {
+      session.syncComplete = true;
+      debugPrint('[P2P] SYNC_COMPLETED: No new missing messages for ${envelope.originPeer}');
+    }
   }
 
-  Future<void> _sendMessageRequest(List<String> requestedIds) async {
+  Future<void> _sendMessageRequest(List<String> requestedIds, [String? targetPeer]) async {
     if (requestedIds.isEmpty) return;
 
     final envelope = NetworkEnvelope(
@@ -250,7 +364,7 @@ class P2PService {
       },
     );
 
-    debugPrint('[P2P] MESSAGE_REQUEST_SENT: requesting ids $requestedIds');
+    debugPrint('[P2P] BATCH_REQUEST_SENT: requesting ${requestedIds.length} ids');
     
     // Add to our own dedup cache to prevent self-echo
     _messageCache.isDuplicate(envelope.msgId);
@@ -258,7 +372,7 @@ class P2PService {
     await _sendEnvelopeHttp(envelope);
   }
 
-  Future<void> _sendMessageResponse(List<NetworkEnvelope> messages) async {
+  Future<void> _sendMessageResponse(List<NetworkEnvelope> messages, [String? targetPeer]) async {
     final payloadMessages = messages.map((m) => m.toJson()).toList();
 
     final envelope = NetworkEnvelope(
@@ -419,7 +533,7 @@ class P2PService {
 
   /// Sends a NetworkEnvelope via HTTP POST to the daemon
   Future<bool> _sendEnvelopeHttp(NetworkEnvelope envelope) async {
-    final uri = Uri.parse('$hostUrl:7000/broadcast');
+    final uri = Uri.parse('$hostUrl:$port/broadcast');
 
     try {
       final response = await http.post(
@@ -485,6 +599,7 @@ class P2PService {
   }
 
   void dispose() {
+    _retryTimer?.cancel();
     _gossipLogSub?.cancel();
     _gossipLog.dispose();
     _channel?.sink.close();
