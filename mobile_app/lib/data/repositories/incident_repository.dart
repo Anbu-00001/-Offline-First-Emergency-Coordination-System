@@ -171,14 +171,28 @@ class IncidentRepository {
       final currentPriority = _getIncidentStatePriority(current.status);
       final incomingPriority = _getIncidentStatePriority(dto.status);
 
+      debugPrint('[IncidentRepo] PEER_UPDATE: received incident $incidentId with state ${dto.status} clock ${dto.sequenceNum}');
+      debugPrint('[IncidentRepo] CURRENT_STATE: ${current.status}');
+      debugPrint('[IncidentRepo] CURRENT_CLOCK: ${current.sequenceNum}');
+
       bool shouldUpdate = false;
+      String mergeDecision = '';
+      
       if (incomingPriority > currentPriority) {
         shouldUpdate = true;
+        mergeDecision = 'Incoming priority (${dto.status}) > Current priority (${current.status})';
       } else if (incomingPriority == currentPriority) {
         if (dto.sequenceNum > current.sequenceNum) {
           shouldUpdate = true;
+          mergeDecision = 'Same priority, Incoming clock (${dto.sequenceNum}) > Current clock (${current.sequenceNum})';
+        } else {
+          mergeDecision = 'Same priority, Incoming clock (${dto.sequenceNum}) <= Current clock (${current.sequenceNum})';
         }
+      } else {
+        mergeDecision = 'Incoming priority (${dto.status}) < Current priority (${current.status})';
       }
+
+      debugPrint('[IncidentRepo] MERGE_DECISION: $mergeDecision -> ${shouldUpdate ? 'incoming wins' : 'local wins'}');
 
       if (shouldUpdate) {
         debugPrint(
