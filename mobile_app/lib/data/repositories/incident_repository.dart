@@ -138,11 +138,24 @@ class IncidentRepository {
     );
   }
 
+  int _getIncidentStatePriority(String state) {
+    switch (state.toUpperCase()) {
+      case 'RESOLVED':
+        return 3;
+      case 'ASSIGNED':
+        return 2;
+      case 'PENDING':
+        return 1;
+      default:
+        return 0; // e.g. 'new' or unknown
+    }
+  }
+
   /// Handles an incoming P2P incident from the network.
   ///
   /// Uses the incident_id from the envelope payload as the DB primary key
   /// to enable DB-level deduplication. If an incident with the same ID already
-  /// exists, the insert is skipped.
+  /// exists, the CRDT merge logic is applied.
   Future<void> _handleIncomingP2PIncident(domain.IncidentCreateDto dto) async {
     // Extract incident_id from envelope metadata (passed through dto.data)
     final String incidentId = dto.data?['incident_id'] as String? ??
@@ -154,8 +167,44 @@ class IncidentRepository {
         .get();
 
     if (existing.isNotEmpty) {
-      debugPrint(
-          '[IncidentRepo] Duplicate incident skipped: $incidentId (already in DB)');
+      final current = incidentFromDb(existing.first);
+      final currentPriority = _getIncidentStatePriority(current.status);
+      final incomingPriority = _getIncidentStatePriority(dto.status);
+
+      bool shouldUpdate = false;
+      if (incomingPriority > currentPriority) {
+        shouldUpdate = true;
+      } else if (incomingPriority == currentPriority) {
+        if (dto.sequenceNum > current.sequenceNum) {
+          shouldUpdate = true;
+        }
+      }
+
+      if (shouldUpdate) {
+        debugPrint(
+            '[IncidentRepo] CRDT_MERGE_APPLIED: Updating $incidentId state to ${dto.status}');
+        debugPrint(
+            '[IncidentRepo] STATE_UPDATED: $incidentId from ${current.status} to ${dto.status}');
+        debugPrint('[IncidentRepo] CONFLICT_RESOLVED: incoming wins');
+
+        await (_db.update(_db.incidents)..where((t) => t.id.equals(incidentId)))
+            .write(
+          db.IncidentsCompanion(
+            statusEnum: Value(dto.status),
+            sequenceNum: Value(dto.sequenceNum),
+            updatedAt: Value(DateTime.now()),
+            lat: Value(dto.lat),
+            lon: Value(dto.lon),
+            priority: Value(dto.priority),
+            type: Value(dto.type),
+            clientId: Value(dto.clientId),
+          ),
+        );
+      } else {
+        debugPrint(
+            '[IncidentRepo] CRDT_MERGE_APPLIED: Local state kept for $incidentId');
+        debugPrint('[IncidentRepo] CONFLICT_RESOLVED: local wins');
+      }
       return;
     }
 
@@ -228,9 +277,9 @@ class IncidentRepository {
           lat: (incMap['lat'] as num?)?.toDouble() ?? 0.0,
           lon: (incMap['lon'] as num?)?.toDouble() ?? 0.0,
           priority: incMap['priority'] as String? ?? 'medium',
-          status: incMap['status'] as String? ?? 'new',
+          status: incMap['status'] as String? ?? incMap['state'] as String? ?? 'new',
           clientId: incMap['reporter_id'] as String? ?? 'synced_peer',
-          sequenceNum: 1,
+          sequenceNum: incMap['clock'] as int? ?? 1,
           data: {'incident_id': incidentId},
         );
 

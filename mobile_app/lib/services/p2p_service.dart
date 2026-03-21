@@ -415,9 +415,9 @@ class P2PService {
       lat: (payload['lat'] as num?)?.toDouble() ?? 0.0,
       lon: (payload['lon'] as num?)?.toDouble() ?? 0.0,
       priority: payload['priority'] as String? ?? 'medium',
-      status: 'new',
+      status: payload['status'] as String? ?? payload['state'] as String? ?? 'new',
       clientId: payload['device_id'] as String? ?? envelope.originPeer,
-      sequenceNum: 1,
+      sequenceNum: payload['clock'] as int? ?? envelope.clock,
       data: {
         'msg_id': envelope.msgId,
         'origin_peer': envelope.originPeer,
@@ -478,8 +478,10 @@ class P2PService {
         'lon': incident.lon,
         'priority': incident.priority,
         'status': incident.status,
+        'state': incident.status,
         'reporter_id': incident.reporterId,
         'timestamp': incident.updatedAt.millisecondsSinceEpoch ~/ 1000,
+        'clock': incident.sequenceNum,
       }).toList();
 
       final envelope = NetworkEnvelope(
@@ -580,8 +582,11 @@ class P2PService {
         'lat': incident.lat,
         'lon': incident.lon,
         'priority': incident.priority,
+        'status': incident.status,
+        'state': incident.status,
         'timestamp': incident.updatedAt.millisecondsSinceEpoch ~/ 1000,
         'device_id': incident.reporterId,
+        'clock': incident.sequenceNum,
       },
     );
 
