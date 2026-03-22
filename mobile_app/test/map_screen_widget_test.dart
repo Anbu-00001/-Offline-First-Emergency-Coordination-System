@@ -31,7 +31,7 @@ void main() {
   late P2PService p2pService;
   late RouteController routeController;
 
-  Future<Widget> _buildTestApp() async {
+  Future<Widget> buildTestApp() async {
     FlutterSecureStorage.setMockInitialValues({});
     db = AppDatabase.memory();
     final authService = AuthService();
@@ -99,7 +99,7 @@ void main() {
   }
 
   testWidgets('MapScreen constructs and renders without error', (WidgetTester tester) async {
-    await tester.pumpWidget(await _buildTestApp());
+    await tester.pumpWidget(await buildTestApp());
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('OpenRescue Map'), findsOneWidget);
@@ -117,7 +117,7 @@ void main() {
   });
 
   testWidgets('MapScreen shows loading state initially', (WidgetTester tester) async {
-    await tester.pumpWidget(await _buildTestApp());
+    await tester.pumpWidget(await buildTestApp());
 
     // Initially should show loading indicator
     expect(find.byType(Scaffold), findsOneWidget);
