@@ -24,6 +24,8 @@ import 'services/responder_registry.dart';
 import 'controllers/responder_controller.dart';
 import 'controllers/route_controller.dart';
 import 'services/route_avoidance_service.dart';
+import 'services/polygon_generator.dart';
+import 'services/polygon_avoidance_service.dart';
 import 'services/p2p_service.dart';
 
 void main() async {
@@ -70,7 +72,9 @@ void main() async {
   final routingService = OsrmRoutingService(osrmService: osrmService, config: routingConfig);
   final routeCacheService = RouteCacheService();
   final routeAvoidanceService = RouteAvoidanceService();
-  final routeController = RouteController(routingService, routeCacheService, routeAvoidanceService, incidentRepo);
+  final polygonGenerator = PolygonGenerator();
+  final polygonAvoidanceService = PolygonAvoidanceService(polygonGenerator);
+  final routeController = RouteController(routingService, routeCacheService, routeAvoidanceService, polygonAvoidanceService, incidentRepo);
   final responderRegistry = MockResponderRegistry();
 
   runApp(
@@ -98,6 +102,7 @@ void main() async {
         Provider<RoutingService>.value(value: routingService),
         Provider<RouteCacheService>.value(value: routeCacheService),
         Provider<RouteAvoidanceService>.value(value: routeAvoidanceService),
+        Provider<PolygonAvoidanceService>.value(value: polygonAvoidanceService),
         Provider<RouteController>.value(value: routeController),
         Provider<P2PService>.value(value: p2pService),
       ],
