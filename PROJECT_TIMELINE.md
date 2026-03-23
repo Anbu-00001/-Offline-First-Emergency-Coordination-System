@@ -1103,3 +1103,13 @@ Content:
 • Added structured logging for CRDT operations (merge applied, state updated, conflict resolved)
 • Validated system using comprehensive multi-device and multi-conflict test scenarios
 • Ensured deterministic convergence under concurrent updates across distributed peers
+
+---
+
+Day 25: Distance-Based Avoidance Routing
+
+Implemented a route safety evaluation layer integrated with the existing OSRM routing pipeline. Each generated route is validated against active incidents using a Haversine distance threshold to detect proximity risks. Unsafe routes trigger alternative route evaluation, ensuring responders are not guided through hazardous zones. The implementation is fully offline, FOSS-compliant, and does not modify the OSRM backend.
+
+Day 26: Polygon-Based Spatial Avoidance
+
+Enhanced routing intelligence by introducing polygon-based danger zone modelling. Incident locations are converted into dynamic polygons, and routes are evaluated using point-in-polygon and polyline intersection logic. A hybrid validation system (distance + polygon) ensures accurate avoidance of complex hazard regions. This upgrade maintains architectural stability, avoids external dependencies, and preserves full offline capability.
