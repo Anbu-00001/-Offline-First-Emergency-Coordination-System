@@ -1,152 +1,134 @@
 # OpenRescue
+## Offline-First Emergency Coordination System
 
-## Week 1 Architecture Overview
+> "Built for when the internet fails — enabling real-time emergency coordination through decentralized, offline-first technology."
+
+---
+
+### The Problem: When Every Second Counts, Centralized Systems Fail
+
+In the aftermath of a disaster, centralized communication infrastructure is the first to collapse. Fiber lines are cut, cell towers lose power, and the internet becomes an unreliable luxury. When this happens:
+- **Centralized systems fail** precisely when they are most needed.
+- **Coordination breaks down**, leaving responders and victims in isolation.
+- **Response times increase**, directly impacting lives.
+
+**OpenRescue rethinks emergency response by removing dependence on centralized infrastructure.**
+
+---
+
+### Key Features (Human + Tech Blend)
+
+**Offline Maps**
+→ Maps remain available even without internet
+→ Implemented using **tile prefetch** logic + a **local file tile provider** leveraging MBTiles.
+
+**Offline Routing (OSRM)**
+→ Responders get navigation even in dead zones
+→ Powered by a **local OSRM engine** running in Docker, processing OpenStreetMap data entirely offline.
+
+**P2P Incident Sync**
+→ Information spreads like fire across the network
+→ Leverages **libp2p GossipSub** for decentralized incident broadcasting across the mesh.
+
+**CRDT-Based Conflict Resolution**
+→ Multiple updates, one certain truth
+→ Uses **Conflict-free Replicated Data Types (CRDTs)** to ensure all devices converge to the same state without a central server.
+
+**Deterministic Danger Zones**
+→ Visual safety boundaries that match on every device
+→ Derived using **pure geometric functions**, ensuring identical polygons are generated from the same incident data without network overhead.
+
+---
+
+### Tech Stack (Why each matters)
+
+**Flutter**
+→ Provides a **high-performance, cross-platform UI** for rapid deployment on both responder and civilian devices.
+
+**OSRM (Open Source Routing Machine)**
+→ Enables **fully offline routing** using local map data, critical for navigation when external APIs (like Google Maps) are unreachable.
+
+**Go (libp2p)**
+→ Powers the **decentralized peer-to-peer communication** layer, allowing devices to form an ad-hoc mesh network automatically.
+
+**Drift (SQLite)**
+→ A reactive **local database** providing the foundation for our offline-first persistence and state management.
+
+---
+
+### Why OpenRescue Stands Out
+
+- **Works Without Internet**: Every core feature—mapping, routing, and sync—is designed for air-gapped environments.
+- **No Central Server Required**: The system forms an autonomous mesh; the more devices join, the stronger the network becomes.
+- **Deterministic Polygon Sync**: Eliminates geometric divergence across devices by calculating danger zones locally and identically.
+- **CRDT-Based Convergence**: Guarantees that even with out-of-order messages, every responder sees the same operational picture.
+
+---
+
+### Architecture Overview
+
+"This system is designed as a fully decentralized mesh where every device acts as both client and server."
 
 ```mermaid
-flowchart LR
-
-subgraph Server["Server Node"]
-API[FastAPI Backend]
-DB[(Database)]
-WS[WebSocket Manager]
-MDNS[mDNS Advertiser]
-end
-
-subgraph Clients["Local Devices"]
-ClientA[Client A]
-ClientB[Client B]
-end
-
-MDNS -->|Advertises _openrescue._tcp.local| Network[(Local Network)]
-ClientA -->|mDNS Discover| Network
-ClientB -->|mDNS Discover| Network
-
-Network -->|Resolve Server IP| ClientA
-Network -->|Resolve Server IP| ClientB
-
-ClientA -->|HTTP Auth + API| API
-ClientB -->|HTTP Health| API
-
-ClientA -. WebSocket ws://server/ws/peer .-> WS
-ClientB -. WebSocket ws://server/ws/peer .-> WS
-
-WS -->|Message Broadcast| ClientB
-WS -->|Message Delivery| ClientA
-
-API --> DB
+flowchart TD
+A[Mobile Device A] -->|GossipSub| B[Mobile Device B]
+B --> C[Incident DB]
+C --> D[CRDT Merge Engine]
+D --> E[Polygon Generator]
+E --> F[Routing Engine OSRM]
+F --> G[Map UI]
 ```
 
-Local Device Communication
+#### Data Flow
+```mermaid
+sequenceDiagram
+participant A as Device A
+participant B as Device B
 
-OpenRescue enables decentralized local communication between devices without centralized infrastructure.
-
-Step 1 — Service Discovery
-
-The server advertises itself using mDNS on the local network.
-
-Clients discover the service _openrescue._tcp.local.
-
-Step 2 — Connection
-
-Client A and Client B resolve the server IP automatically.
-
-They connect to the backend using WebSockets:
-
-ws://<server-ip>:8000/ws/peer
-
-Step 3 — Messaging
-
-Client A sends a JSON message.
-
-The FastAPI WebSocket manager receives it.
-
-The server broadcasts the message to connected peers.
-
-Example flow:
-
-Client A → WebSocket → Server → WebSocket Manager → Client B
-
-Step 4 — Offline Support
-
-Messages are stored in the database if the recipient is offline.
-
-Delivered when the device reconnects.
-
-Week 1 Implementation Status
-
-Implemented components:
-
-FastAPI backend
-
-JWT authentication
-
-CAP XML parser
-
-Incident management system
-
-Responder assignment
-
-WebSocket messaging
-
-mDNS local discovery
-
-Documentation:
-
-Additional technical documentation is available:
-
-docs/week1_demo.md
-
-docs/week1_architecture.mmd
-
-OpenRescue is a decentralized emergency system designed for community resilience without relying on centralized or proprietary points of failure. The goal is to provide a robust framework combining high-performance backends and real-time collaboration.
-
-## Features
-- **FastAPI Backend**: Asynchronous and lightweight server, capable of real-time communication.
-- **PostgreSQL & PostGIS**: Geospatial data handling capability allowing full mapping functionality independent of single providers.
-- **Local Network Discovery**: Decentralized peer-to-peer capabilities leveraging mDNS without centralized DNS.
-- **Redis Cache**: High throughput Pub/Sub mechanism.
-
-## License & Architectural Sovereignty
-
-The OpenRescue project is explicitly 100% open-source software and heavily emphasizes Architectural Sovereignty. 
-
-**License:**  
-This software is licensed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE) or later. The GPL guarantees end users the freedom to run, study, share, and modify the software, aligning completely with the FOSS principles governing the design of the project.
-
-**Architectural Sovereignty:**  
-We commit to avoiding all proprietary APIs or third-party locked-in services. 
-- **NO Google Maps APIs.** Instead, we use open standards like OpenStreetMap tools and postgis indexing for geographical features.
-- **NO Firebase or Proprietary Push Mechanics.** Communications are orchestrated via self-hosted Redis, WebSockets, and P2P structures like mDNS.
-
-By enforcing these constraints, OpenRescue guarantees deployment flexibility and long-term sustainability without vendor lockdown.
-
-## FOSS Compliance
-
-OpenRescue is built with **Architectural Sovereignty** as a core requirement. It has undergone a formal Free and Open-Source Software (FOSS) audit to ensure absolute compliance:
-
-- **100% Open-Source Components**: Every dependency across the Flutter app, FastAPI backend, and Go P2P node is fully open-source (GPL, MIT, Apache 2.0, BSD).
-- **No Proprietary APIs**: No Google Maps SDK, Firebase, or closed data vendors. We utilize OpenStreetMap, OSRM, and Nominatim.
-- **Privacy First**: No telemetry, analytics, or external crash reporting. User data never leaves the device/mesh network.
-- **Fully Offline Capable**: Routing operates locally via OSRM, map tiles load from local MBTiles/cache, and P2P sync works natively via mDNS and GossipSub without requiring a central server or internet.
-- **License Compliance**: Fully licensed under GPL-3.0 with attribution provided in the [NOTICE](NOTICE) file.
-
-## Running the Project
-
-### Backend
-```bash
-cd backend
-source .venv_openrescue/bin/activate
-uvicorn app.main:app --reload
+A->>B: Broadcast Incident
+B->>B: CRDT Merge
+B->>B: Generate Polygon
+B->>B: Update Route Avoidance
 ```
 
-### Mobile App
-```bash
-cd mobile_app
-flutter pub get
-flutter run
-```
+---
 
-### OSRM Routing
-```bash
-docker compose -f docker-compose.osrm.yml up
-```
+### Example Scenario: Flood Response
+
+**The Scenario:** A sudden flash flood knocks out local cell towers. 
+1. **Report:** A responder on the ground (Device A) scouts a submerged bridge and creates an incident.
+2. **Sync:** Because Device A is part of the OpenRescue mesh, the incident is instantly broadcast to Device B (a block away) via P2P.
+3. **Adapt:** Device B's routing engine immediately detects the new "Danger Zone" and reroutes the responder to a safer path.
+4. **Result:** Real-time coordination continues purely over the ad-hoc network, saving critical minutes.
+
+---
+
+### How It Works (The 5-Step Flow)
+
+1. **Incident Created**: Data is captured locally and given a causal timestamp (Lamport clock).
+2. **Broadcast via P2P**: The incident propagates through the libp2p GossipSub network.
+3. **CRDT Merge**: Incoming data is merged into the local Drift database with deterministic conflict resolution.
+4. **Polygon Generated**: The system derives a hazard area (polygon) around the incident coordinates.
+5. **Routing Updated**: The offline OSRM engine adjusts routes to avoid newly identified hazard polygons.
+
+---
+
+### FOSS Compliance
+
+OpenRescue is built on **Architectural Sovereignty**:
+- **100% Open-Source**: Every layer—from Flutter to Go—is fully FOSS compliant.
+- **No Proprietary APIs**: No Google Maps, Firebase, or closed SDKs.
+- **Fully Offline**: Designed to work where big-tech infrastructure ends.
+
+---
+
+### How to Run
+
+1. **OSRM Setup**: `docker compose -f docker-compose.osrm.yml up`
+2. **Go P2P Node**: Located in `backend/p2p-node/`, run `go run main.go`
+3. **Flutter App**: `cd mobile_app && flutter run`
+
+---
+
+Licensed under [GPL-3.0](LICENSE).
+© OpenStreetMap contributors
