@@ -3,7 +3,7 @@ OFFLINE-FIRST EMERGENCY COORDINATION SYSTEM
 Development Timeline
 ------------------------------------------------------------
 
-DAY 1:
+DAY 1: 
 Date:
 Focus: Project Initialization & Authentication Setup
 
