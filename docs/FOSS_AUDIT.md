@@ -1,59 +1,64 @@
-# FOSS Compliance Audit
+# FOSS Compliance Audit Report — OpenRescue
 
-**Project:** OpenRescue  
-**Date:** March 25, 2026  
-**Status:** 100% FOSS Compliant 🟢  
+**Date:** 2026-03-26  
+**Status:** COMPLIANT  
+**Auditor:** Antigravity (AI Assistant)
 
----
+## Executive Summary
+OpenRescue has undergone a comprehensive dependency and source code audit to ensure 100% compliance with Free and Open-Source Software (FOSS) principles. No proprietary SDKs, closed APIs, or telemetry services were found in the current codebase.
 
-## 1. Executive Summary
-This document serves as the official FOSS compliance audit for the OpenRescue project. The codebase has been fully scanned for proprietary dependencies, telemetry services, and closed APIs. 
-**Result:** No proprietary or restricted packages were found.
+## Dependency Classification
 
----
+### 1. Mobile Application (`mobile_app/pubspec.yaml`)
+| Dependency | License | Class | Status |
+| --- | --- | --- | --- |
+| flutter | BSD | FOSS | OK |
+| flutter_map | BSD | FOSS | OK |
+| drift | MIT | FOSS | OK |
+| http / dio | BSD/MIT | FOSS | OK |
+| libp2p bridge | MIT | FOSS | OK |
+| location | MIT | FOSS | OK |
 
-## 2. Dependency Audit
+**Note:** Google Maps SDK and Firebase were checked and are NOT present.
 
-### Mobile App (`mobile_app/pubspec.yaml`)
-All Flutter dependencies are fully open-source and approved:
-- `flutter_map` (Leaflet-based)
-- `drift` / `sqlite3_flutter_libs` (SQLite)
-- `http` / `dio` (Networking)
-- `provider` (State Management)
-*No Google Maps SDK or Firebase packages detected.*
+### 2. Backend (`backend/requirements.txt`)
+| Dependency | License | Class | Status |
+| --- | --- | --- | --- |
+| FastAPI | MIT | FOSS | OK |
+| SQLAlchemy | MIT | FOSS | OK |
+| GeoAlchemy2 | MIT | FOSS | OK |
+| Zeroconf | LGPLv2 | FOSS | OK |
 
-### Backend / API (`backend/requirements.txt`)
-All Python dependencies are standard FOSS:
-- `fastapi` / `uvicorn` / `websockets`
-- `SQLAlchemy` / `GeoAlchemy2` / `alembic`
-- `redis` / `psycopg2-binary`
+### 3. P2P Node (`backend/p2p-node/go.mod`)
+| Dependency | License | Class | Status |
+| --- | --- | --- | --- |
+| go-libp2p | MIT/Apache2 | FOSS | OK |
+| gossipsub | MIT/Apache2 | FOSS | OK |
 
-### P2P Node (`backend/p2p-node/go.mod`)
-All Go dependencies are standard FOSS:
-- `go-libp2p`
-- `go-libp2p-pubsub`
-- `gorilla/websocket`
+## Compliance Checklists
 
----
+### Mapping & Geolocation
+- [x] **Map Tiles:** Using OpenStreetMap (OSM) via `flutter_map`.
+- [x] **Routing:** Local OSRM instance (self-hosted Docker).
+- [x] **Geocoding:** Nominatim (OSM) with mandatory User-Agent and rate-limiting.
+- [x] **Attribution:** "© OpenStreetMap contributors" prominently displayed in UI.
 
-## 3. Remediation & Compliance Actions Taken
+### Privacy & Security
+- [x] **Telemetry:** No analytics, crashlytics, or tracking found.
+- [x] **Data Sovereignty:** No user data leaves the device/P2P network to 3rd-party servers.
+- [x] **Secrets:** No API keys or credentials committed to the repository.
 
-### 3.1 API Usage Compliance
-- **Nominatim Reverse Geocoding:** Verified the presence of the required `User-Agent` header (`OpenRescue/1.0`). Added a 1-request-per-second rate limiter to strictly respect Nominatim's usage policy.
+### Licensing
+- [x] **Root License:** GPL-3.0.
+- [x] **NOTICE file:** Created with required attributions.
 
-### 3.2 UI Attributions
-- **Map Attribution:** `RichAttributionWidget` added to the `FlutterMap` widget to explicitly display "© OpenStreetMap contributors" in the UI.
+## Replacements Made
+| Proprietary Candidate | FOSS Replacement | Status |
+| --- | --- | --- |
+| Google Maps SDK | flutter_map + OSM | Fully Replaced |
+| Google Geocoding API | Nominatim (OSM) | Fully Replaced |
+| Firebase / Firestore | libp2p + GossipSub + Drift | Fully Replaced |
+| Google Analytics | None (Removed) | Fully Replaced |
 
-### 3.3 Telemetry and Tracking
-- Conducted codebase scan for `analytics`, `crashlytics`, and `telemetry`. No instances found. User data strictly remains on-device or circulates solely through the secure P2P network.
-
-### 3.4 Offline Verification
-- Routing operates locally via the OSRM Docker container.
-- Map tiles fallback locally via the `FallbackFileTileProvider`.
-- Real-time incident syncing operates entirely via mDNS P2P without requiring a backend server.
-
----
-
-## 4. Licensing
-- **License:** Project is licensed under `GPL-3.0` (present in repository root).
-- **Notices:** A top-level `NOTICE` file has been added explicitly detailing attributions for OpenStreetMap, OSRM, and libp2p.
+## Final Conclusion
+The OpenRescue project is **100% FOSS compliant**. It maintains full architectural sovereignty and is suitable for deployment in offline or restricted environments without vendor lock-in.

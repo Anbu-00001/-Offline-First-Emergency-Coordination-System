@@ -1,14 +1,31 @@
-OpenRescue incorporates and relies on the following open-source projects and data:
+OpenRescue NOTICE
 
-1. OpenStreetMap
-This project uses OpenStreetMap data licensed under the Open Data Commons Open Database License (ODbL). 
-© OpenStreetMap contributors. 
-For more information, see: https://www.openstreetmap.org/copyright
+This project uses the following components and libraries:
+
+1. OpenStreetMap (OSM)
+   - Data and map tiles are Copyright © OpenStreetMap contributors.
+   - Licensed under the Open Database License (ODbL) v1.0.
+   - https://www.openstreetmap.org/copyright
 
 2. OSRM (Open Source Routing Machine)
-This project uses OSRM for local routing algorithms, licensed under the BSD 2-Clause License.
+   - Licensed under the BSD 2-Clause License.
+   - https://github.com/Project-OSRM/osrm-backend
 
-3. libp2p
-This project uses go-libp2p and related networking modules for peer-to-peer communication, licensed under the MIT License / Apache 2.0 License.
+3. libp2p (go-libp2p)
+   - Dual-licensed under the MIT and Apache 2.0 Licenses.
+   - https://github.com/libp2p/go-libp2p
 
-All other dependencies used in this project are Free and Open Source Software (FOSS), compliant with GPL-3.0 compatibility rules.
+4. Flutter & Dart
+   - Licensed under the BSD 3-Clause License.
+   - https://flutter.dev | https://dart.dev
+
+5. Drift (ORM for SQLite)
+   - Licensed under the MIT License.
+   - https://drift.simonbinder.eu
+
+6. FastAPI
+   - Licensed under the MIT License.
+   - https://fastapi.tiangolo.com
+
+Special thanks to the FOSS community for providing the resilient infrastructure 
+that makes decentralized emergency response possible.

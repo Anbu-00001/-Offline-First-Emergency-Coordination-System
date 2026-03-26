@@ -122,10 +122,13 @@ By enforcing these constraints, OpenRescue guarantees deployment flexibility and
 
 ## FOSS Compliance
 
-OpenRescue has undergone a formal Free and Open-Source Software (FOSS) audit to ensure absolute compliance with global open-software standards:
-- **All components are open-source**: Every dependency across the Flutter app, FastAPI backend, and Go P2P node is fully open-source and approved.
-- **No proprietary APIs used**: The application is free of vendor lock-in. We do not use Google Maps SDK, Firebase, or closed data vendors. We utilize OpenStreetMap, OSRM, and Nominatim.
-- **Fully offline capable**: Routing operates locally via the OSRM Docker container, and map tiles dynamically fall back to local storage without requiring external internet. Real-time peer-to-peer syncing is supported natively via mDNS.
+OpenRescue is built with **Architectural Sovereignty** as a core requirement. It has undergone a formal Free and Open-Source Software (FOSS) audit to ensure absolute compliance:
+
+- **100% Open-Source Components**: Every dependency across the Flutter app, FastAPI backend, and Go P2P node is fully open-source (GPL, MIT, Apache 2.0, BSD).
+- **No Proprietary APIs**: No Google Maps SDK, Firebase, or closed data vendors. We utilize OpenStreetMap, OSRM, and Nominatim.
+- **Privacy First**: No telemetry, analytics, or external crash reporting. User data never leaves the device/mesh network.
+- **Fully Offline Capable**: Routing operates locally via OSRM, map tiles load from local MBTiles/cache, and P2P sync works natively via mDNS and GossipSub without requiring a central server or internet.
+- **License Compliance**: Fully licensed under GPL-3.0 with attribution provided in the [NOTICE](NOTICE) file.
 
 ## Running the Project
 
