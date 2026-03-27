@@ -1,197 +1,174 @@
-<!-- Badges -->
+<!-- 1. Top Badges -->
 ![License: GPL-3.0](https://img.shields.io/badge/License-GPL_3.0-blue.svg)
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)
 ![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)
 ![Offline-First](https://img.shields.io/badge/Offline--First-Fully_Supported-success)
 ![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen.svg)
 
-![OpenRescue Banner](docs/hero-banner.png)
+<!-- 2. Hero Section -->
+<div align="center">
+  <img src="docs/hero-banner.png" alt="OpenRescue Banner" width="100%" />
+</div>
 
+<!-- 3. Title & Tagline -->
 # OpenRescue
-**Built for when the internet fails — real-time emergency coordination through decentralized, offline-first technology.**
 
----
+> **Built for when the internet fails — enabling real-time emergency coordination through decentralized, offline-first technology.**
 
+<!-- 4. Demo & Visuals -->
 ### [**🎬 Watch the 2-Minute Pitch/Demo Video**](#)
 
-<p align="center">
+<div align="center">
   <img src="docs/sync-demo.gif" alt="P2P Sync Demo" width="45%" />
   <img src="docs/routing-demo.gif" alt="Offline Routing Demo" width="45%" />
-</p>
+</div>
 
 ---
 
+<!-- 5. Table of Contents -->
 ## Table of Contents
-- [The 'Oh Crap' Scenario](#the-oh-crap-scenario)
+- [The "Oh Crap" Scenario](#the-oh-crap-scenario)
 - [Key Features (Show, Don't Tell)](#key-features-show-dont-tell)
-- [Architecture Deep Dive](#architecture-deep-dive)
+- [Architecture & Data Flow](#architecture--data-flow)
 - [Tech Stack](#tech-stack)
-- [Frictionless Quickstart](#frictionless-quickstart-developer-experience)
+- [Frictionless Quickstart](#frictionless-quickstart)
 - [Hackathon Journey & Roadmap](#hackathon-journey--roadmap)
 - [Closing & License](#closing--license)
 
 ---
 
-## The 'Oh Crap' Scenario
+<!-- 6. The "Oh Crap" Scenario -->
+## The "Oh Crap" Scenario
 
-In the aftermath of a disaster, centralized communication infrastructure is the first to collapse. Fiber lines are cut, cell towers lose power, and the internet becomes an unreliable luxury. When this happens:
-- **Centralized systems fail** precisely when they are most needed.
-- **Coordination breaks down**, leaving responders and victims in isolation.
-- **Response times increase**, directly impacting lives.
+In the aftermath of a disaster, centralized communication infrastructure is the first to collapse. Fiber lines are cut, cell towers lose power, and the internet becomes an unreliable luxury. When this happens, **centralized systems fail precisely when they are most needed**. Coordination breaks down, leaving responders and victims in isolation, drastically increasing response times and directly impacting lives.
 
-**OpenRescue is not just software—it's a life-saving tool.** It rethinks emergency response by removing dependence on massive centralized infrastructure, empowering first responders to coordinate effectively even in absolute dead zones.
+**OpenRescue is not just software—it's a life-saving tool.** It rethinks emergency response by removing dependence on a central point of failure. It empowers first responders to collaborate effectively even in absolute dead zones, where traditional technology fails.
 
 ---
 
+<!-- 7. Key Features -->
 ## Key Features (Show, Don't Tell)
 
-*   **Offline Maps**: *Ground truth is always visible.* Maps remain fully available without internet, implemented using tile prefetch logic and a durable local file tile provider leveraging MBTiles.
-*   **Offline Routing via OSRM**: *Navigating around hazards in a dead zone.* Powered by a local OSRM engine running in Docker. Responders get critical routing utilizing OpenStreetMap data entirely offline.
-*   **P2P Incident Sync via libp2p**: *Information spreads like fire across the network.* Leverages robust libp2p GossipSub for instant decentralized incident broadcasting across the mesh.
-*   **CRDT Conflict Resolution**: *Multiple chaotic updates condense into one truth.* Uses Conflict-free Replicated Data Types (CRDTs) to ensure all devices converge to the exact same state locally without ever touching a central server.
-*   **Deterministic Danger Zones**: *Universal situational awareness.* Visual safety boundaries are derived using pure geometric functions, ensuring identical polygons are generated from the same incident data across all devices without any network overhead.
+*   🗺️ **Offline Maps**: *Ground truth is always visible.* Pre-fetched tiles and an MBTiles provider mean mapping is fully functional without internet.
+*   🧭 **Offline Routing via OSRM**: *Navigating around hazards in a dead zone.* Powered by a local Docker-based OSRM engine utilizing OpenStreetMap data entirely offline.
+*   📡 **P2P Incident Sync via libp2p**: *Information spreads like fire across the network.* Leverages robust GossipSub mesh networking to automatically broadcast incident reports to nearby peers.
+*   🔗 **CRDT Conflict Resolution**: *Multiple chaotic updates condense into one truth.* Uses Conflict-free Replicated Data Types (CRDTs) to ensure eventual consistency locally without ever touching a central server.
+*   ⚠️ **Deterministic Danger Zones**: *Universal situational awareness.* Hazard polygons are computed identically across all devices using pure geometric functions, ensuring safety bounds match without network overhead.
 
 ---
 
-## Architecture Deep Dive
+<!-- 8. Architecture & Data Flow -->
+## Architecture & Data Flow
 
 <details>
-<summary><b>View System Architecture & Data Flow</b></summary>
-
-### System Layout
-
-"This system is designed as a fully decentralized mesh where every device acts as both client and server."
+<summary><b>Diagram 1: The Ad-Hoc Mesh Network</b></summary>
 
 ```mermaid
-flowchart TD
-A[Mobile Device A] -->|GossipSub| B[Mobile Device B]
-B --> C[Incident DB]
-C --> D[CRDT Merge Engine]
-D --> E[Polygon Generator]
-E --> F[Routing Engine OSRM]
-F --> G[Map UI]
+graph TD
+    A[Device A] <-->|GossipSub P2P| B[Device B]
+    B <-->|GossipSub P2P| C[Device C]
+    C <-->|GossipSub P2P| D[Device D]
+    D <-->|GossipSub P2P| A
+    A -.->|Broken Link x| Cloud[Central Cloud Server]
+    B -.->|Broken Link x| Cloud
 ```
 
-### Core Module Connections
+</details>
+
+<details>
+<summary><b>Diagram 2: The Local Device Stack</b></summary>
 
 ```mermaid
 flowchart LR
-
-%% Devices
-A[Flutter App Device A]
-B[Flutter App Device B]
-
-%% Core Mobile Components
-A --> A1[Local DB (Drift)]
-A --> A2[Polygon Generator]
-A --> A3[Routing Controller]
-
-B --> B1[Local DB (Drift)]
-B --> B2[Polygon Generator]
-B --> B3[Routing Controller]
-
-%% P2P Layer
-A -->|Broadcast Incident| P2P[Go libp2p Daemon]
-P2P -->|GossipSub Sync| B
-
-%% CRDT + Sync
-B --> B4[CRDT Merge Engine]
-A --> A4[CRDT Merge Engine]
-
-%% Polygon Generation
-A4 --> A2
-B4 --> B2
-
-%% OSRM Routing
-A3 --> OSRM[OSRM Server (Local)]
-B3 --> OSRM
-
-%% Tile System
-A --> Tiles[Offline Tile Storage]
-B --> Tiles
-
-%% Map Rendering
-Tiles --> Map[Flutter Map UI]
-OSRM --> Map
-
-%% Optional Backend
-A -->|Optional API| FastAPI[FastAPI Backend]
-B -->|Optional API| FastAPI
-
-FastAPI -->|Metadata / Extensions| A
-FastAPI -->|Metadata / Extensions| B
+    UI[Flutter UI] <--> DB[Drift Local DB]
+    DB --> PG[Polygon Generator]
+    PG --> OSRM[Local OSRM Container]
+    OSRM --> UI
+    DB <--> P2P[libp2p Daemon]
 ```
 
-### Data Flow
+</details>
+
+<details>
+<summary><b>Diagram 3: Incident Propagation Sequence</b></summary>
 
 ```mermaid
 sequenceDiagram
-participant A as Device A
-participant B as Device B
+    participant AppA as App A
+    participant P2P as Mesh Network
+    participant AppB as App B
+    participant OSRM as OSRM B
 
-A->>B: Broadcast Incident
-B->>B: CRDT Merge
-B->>B: Generate Polygon
-B->>B: Update Route Avoidance
+    AppA->>AppA: Log Incident
+    AppA->>AppA: Assign Lamport Timestamp
+    AppA->>P2P: Broadcast via GossipSub
+    P2P->>AppB: Receive Incident
+    AppB->>AppB: Resolve CRDT
+    AppB->>AppB: Generate Polygon
+    AppB->>OSRM: Request Route Avoidance
+    OSRM-->>AppB: Return Safe Route
+    AppB->>AppB: Update Map UI
 ```
+
 </details>
 
 ---
 
+<!-- 9. Tech Stack -->
 ## Tech Stack
 
-*   **Flutter**: Provides a **high-performance, cross-platform UI** ensuring we can rapidly deploy to any responder or civilian device in the field.
-*   **Go (libp2p)**: The engine of our **decentralized peer-to-peer communication** layer, allowing ad-hoc mesh networking that works seamlessly without a central broker.
-*   **OSRM (Open Source Routing Machine)**: Enables **fully offline routing** using local map data, critical for navigation when external APIs (like Google Maps) are completely unreachable.
-*   **Drift (SQLite)**: *Why Drift?* Reactive local storage ensures our mobile UI immediately updates the second P2P data syncs and CRDTs merge, giving a flawless reactive experience.
+*   **Flutter**: Provides a **high-performance, cross-platform UI** ensuring we can rapidly deploy a unified responder interface to any mobile device in the field.
+*   **Go (libp2p)**: The powerhouse behind our **decentralized peer-to-peer communication** layer, allowing ad-hoc mesh networking that works seamlessly without a central broker.
+*   **OSRM (Open Source Routing Machine)**: Enables **fully offline routing** using raw local map data to dynamically calculate safe paths when external APIs are completely unreachable.
+*   **Drift (SQLite)**: *Why Drift?* Reactive local storage ensures our mobile UI immediately updates the second P2P data syncs and CRDTs effectively merge, giving responders a flawless real-time experience.
 
 ---
 
-## Frictionless Quickstart (Developer Experience)
+<!-- 10. Frictionless Quickstart -->
+## Frictionless Quickstart
 
-We've made it as bulletproof as possible to boot up the entire decentralized stack.
+We've made it as bulletproof as possible to boot up the decentralized stack locally.
 
 ### Prerequisites
 - Docker & Docker Compose
 - Flutter SDK
 - Go 1.21+
 
-> ⚠️ **Crucial Network Note:** The Flutter mobile app needs to connect to the local OSRM and Go P2P nodes. If running on a physical device or emulator, ensure your config environment points to your machine's **local network IP address** (e.g., `192.168.1.X`), not `localhost`!
+> ⚠️ **Crucial Network Note:** The Flutter mobile app must connect to the machine's **local network IP address** (e.g., `192.168.1.X`), not `localhost`! If running on a physical device or emulator, update your config accordingly.
 
-### Step 1: Spin up Local Offline Routing (OSRM)
-Get the routing engine running on offline OpenStreetMap data. 
+### Step 1: Spin up Local OSRM
+Start the local offline routing engine.
 ```bash
 docker compose -f docker-compose.osrm.yml up -d
 ```
 
-### Step 2: Run the Go P2P Node
-Start the decentralized mesh network daemon.
+### Step 2: Run Go P2P Node
+Launch the decentralized mesh network daemon.
 ```bash
-cd backend/p2p-node/
-go run main.go
+cd backend/p2p-node/ && go run main.go
 ```
 
-### Step 3: Run the Flutter App
-Launch the responder interface.
+### Step 3: Run Flutter App
+Start the responder mobile interface.
 ```bash
-cd mobile_app
-flutter run
+cd mobile_app && flutter run
 ```
 
 ---
 
+<!-- 11. Hackathon Journey & Roadmap -->
 ## Hackathon Journey & Roadmap
 
 ### Challenges We Conquered
-Building a completely decentralized mobile system is inherently challenging. Our biggest victory was guaranteeing **CRDT convergence over an unreliable P2P mesh**. We had to ensure that when devices reconnect after intermittent signal drops, their incident polygons update deterministically without creating duplicate or fragmented hazard zones.
+Building a fully decentralized mesh system is inherently difficult. Our biggest hurdle was guaranteeing **CRDT convergence over flaky P2P connections**. Ensuring that incident states deterministically matched across all devices—without duplicate or orphaned polygons when reconnecting after signal drops—required intense synchronization logic. We also had to heavily focus on battery drain optimization since constant mesh broadcasting severely impacts mobile devices.
 
 ### What's Next 🚀
-*   **Hardware Integration**: Extending the P2P layer over **LoRaWAN** to cover massive distances during complete cellular blackouts.
-*   **Battery Optimization**: Throttling GossipSub broadcasts intelligently to save crucial responder device battery life in extended scenarios.
-*   **Mesh Bridging**: Allowing devices with satellite uplinks to act as temporary gateways for the rest of the offline mesh.
+*   **Hardware Integration**: Extending the P2P layer over **LoRaWAN** hardware modules to cover massive geographical distances during complete cellular grid blackouts.
+*   **Drone Node Relays**: Integrating aerial drones to act as temporary high-altitude P2P mesh relay points, expanding network coverage to otherwise isolated ground units.
 
 ---
 
+<!-- 12. Closing & License -->
 ## Closing & License
 
 OpenRescue is built with **Architectural Sovereignty**: 
@@ -199,6 +176,6 @@ OpenRescue is built with **Architectural Sovereignty**:
 - **No Proprietary APIs**: No Google Maps, Firebase, or closed SDKs.
 - **Fully Offline**: Designed to work where big-tech infrastructure ends.
 
-Licensed under [GPL-3.0](LICENSE).  
+Licensed under the [GPL-3.0 License](LICENSE).  
 © OpenStreetMap contributors  
 *Hackathon built. Real-world ready.*
