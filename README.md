@@ -15,14 +15,99 @@
 
 > **Built for when the internet fails — enabling real-time emergency coordination through decentralized, offline-first technology.**
 
-<!-- 4. Demo & Visuals -->
-### [**🎬 Watch the 2-Minute Pitch/Demo Video**](#)
+## System Workflows Overview
 
-<div align="center">
-  <img src="https://placehold.co/400x300/1e1e2e/cba6f7?text=P2P+Sync+Demo.gif" alt="P2P Sync Demo" width="45%" />
-  &nbsp;
-  <img src="https://placehold.co/400x300/1e1e2e/89dceb?text=Offline+Routing+Demo.gif" alt="Offline Routing Demo" width="45%" />
-</div>
+"OpenRescue is built as a decentralized, offline-first system where each component plays a critical role in ensuring reliability during network failures. The following diagrams break down how data flows across the system."
+
+### 1. Complete System Architecture
+
+```mermaid
+flowchart LR
+A[Flutter App] --> DB[Local DB (Drift)]
+A --> P2P[Go libp2p Daemon]
+A --> OSRM[OSRM Server]
+A --> Tiles[Offline Tiles]
+
+P2P -->|Sync Incidents| Other[Other Devices]
+
+DB --> CRDT[CRDT Merge Engine]
+CRDT --> Poly[Polygon Generator]
+
+Poly --> Route[Routing Controller]
+Route --> OSRM
+
+Tiles --> UI[Map UI]
+OSRM --> UI
+```
+
+"This diagram shows how each device operates independently while still syncing with nearby devices using peer-to-peer communication."
+
+### 2. Peer-to-Peer Incident Sync
+
+```mermaid
+sequenceDiagram
+participant A as Device A
+participant P as P2P Network
+participant B as Device B
+
+A->>P: Broadcast Incident
+P->>B: Deliver Incident
+B->>B: CRDT Merge
+B->>B: Store in Local DB
+```
+
+"Incidents are broadcast over a decentralized mesh network, ensuring data reaches nearby devices without any central server."
+
+### 3. Conflict Resolution & Sync (CRDT + HEAD)
+
+```mermaid
+flowchart TD
+A[Incoming Incident] --> B[Check Local State]
+B --> C{Conflict?}
+C -->|Yes| D[Apply CRDT Rules]
+C -->|No| E[Accept Directly]
+D --> F[Update Local DB]
+E --> F
+F --> G[Update HEAD]
+```
+
+"This ensures all devices converge to the same state without conflicts, even if updates arrive out of order."
+
+### 4. Deterministic Danger Zone Generation
+
+```mermaid
+flowchart TD
+A[Incident Data] --> B[Polygon Generator]
+B --> C[Deterministic Shape]
+C --> D[Polygon Cache]
+D --> E[Routing Avoidance]
+```
+
+"Polygons are generated locally using deterministic logic, ensuring all devices produce identical danger zones without sharing geometry."
+
+### 5. Offline Routing with OSRM
+
+```mermaid
+flowchart LR
+A[User Location] --> B[Routing Controller]
+B --> C[OSRM Local Server]
+C --> D[Route Geometry]
+D --> E[Polyline Render]
+```
+
+"Routing is computed locally using OSRM, allowing navigation even without internet connectivity."
+
+### 6. Offline Map System
+
+```mermaid
+flowchart TD
+A[GPS Location] --> B[Tile Prefetch Service]
+B --> C[Download Tiles]
+C --> D[Local Storage]
+D --> E[Flutter Map]
+```
+
+"Map tiles are downloaded in advance and stored locally, enabling seamless offline map usage."
 
 ---
 
