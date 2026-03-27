@@ -7,7 +7,7 @@
 
 <!-- 2. Hero Section -->
 <div align="center">
-  <img src="docs/hero-banner.png" alt="OpenRescue Banner" width="100%" />
+  <img src="https://placehold.co/800x200/1e1e2e/02569B?text=OpenRescue&font=Montserrat" alt="OpenRescue Banner" width="100%" />
 </div>
 
 <!-- 3. Title & Tagline -->
@@ -19,8 +19,9 @@
 ### [**🎬 Watch the 2-Minute Pitch/Demo Video**](#)
 
 <div align="center">
-  <img src="docs/sync-demo.gif" alt="P2P Sync Demo" width="45%" />
-  <img src="docs/routing-demo.gif" alt="Offline Routing Demo" width="45%" />
+  <img src="https://placehold.co/400x300/1e1e2e/cba6f7?text=P2P+Sync+Demo.gif" alt="P2P Sync Demo" width="45%" />
+  &nbsp;
+  <img src="https://placehold.co/400x300/1e1e2e/89dceb?text=Offline+Routing+Demo.gif" alt="Offline Routing Demo" width="45%" />
 </div>
 
 ---
@@ -61,7 +62,7 @@ In the aftermath of a disaster, centralized communication infrastructure is the 
 ## Architecture & Data Flow
 
 <details>
-<summary><b>Diagram 1: The Ad-Hoc Mesh Network</b></summary>
+<summary><b>🌐 Diagram 1: The Ad-Hoc Mesh Network Topology</b></summary>
 
 ```mermaid
 graph TD
@@ -76,7 +77,7 @@ graph TD
 </details>
 
 <details>
-<summary><b>Diagram 2: The Local Device Stack</b></summary>
+<summary><b>🛠️ Diagram 2: The Local Device Stack (Flutter + Go + OSRM)</b></summary>
 
 ```mermaid
 flowchart LR
@@ -90,7 +91,45 @@ flowchart LR
 </details>
 
 <details>
-<summary><b>Diagram 3: Incident Propagation Sequence</b></summary>
+<summary><b>🔄 Diagram 3: CRDT Conflict Resolution (How 2 Devices Merge Truth)</b></summary>
+
+```mermaid
+flowchart TD
+    subgraph Disconnected
+        A[Device A] -->|Create Incident| Inc1[Bridge Out]
+        B[Device B] -->|Create Incident| Inc2[Road Block]
+    end
+
+    subgraph Connection Restored
+        Inc1 -.->|P2P GossipSub| Merged
+        Inc2 -.->|P2P GossipSub| Merged
+    end
+
+    subgraph Merged Truth via CRDT
+        Merged[CRDT Merge Engine]
+        Merged --> StateA[Device A State: Bridge Out + Road Block]
+        Merged --> StateB[Device B State: Bridge Out + Road Block]
+    end
+```
+
+</details>
+
+<details>
+<summary><b>⚠️ Diagram 4: Deterministic Danger Zone Generation</b></summary>
+
+```mermaid
+flowchart LR
+    ID[Raw P2P Incident Coordinates] -->|Parse| Math[Geometric Math Engine]
+    Math -->|Apply Radial Buffer| Poly[Generate Polygon Vertices]
+    Poly --> DB[Map to GeoJSON / Local DB]
+    DB --> MapUI[Render on Flutter Map]
+    DB --> OSRM[Feed to OSRM Avoidance List]
+```
+
+</details>
+
+<details>
+<summary><b>📡 Diagram 5: P2P Incident Propagation Sequence</b></summary>
 
 ```mermaid
 sequenceDiagram
@@ -108,6 +147,29 @@ sequenceDiagram
     AppB->>OSRM: Request Route Avoidance
     OSRM-->>AppB: Return Safe Route
     AppB->>AppB: Update Map UI
+```
+
+</details>
+
+<details>
+<summary><b>⚡ Diagram 6: System Lifecycle & Offline Fallback</b></summary>
+
+```mermaid
+stateDiagram-v2
+    [*] --> Online
+    Online --> FetchingMBTiles: Pre-fetching Map Tiles
+    FetchingMBTiles --> Online
+    
+    Online --> NetworkFailure: Disaster Strikes
+    NetworkFailure --> MeshMode
+    
+    state MeshMode {
+        [*] --> LocalRouting
+        LocalRouting --> P2P_Sync
+        P2P_Sync --> CRDT_Merge
+        CRDT_Merge --> MapUpdate
+        MapUpdate --> [*]
+    }
 ```
 
 </details>
