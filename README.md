@@ -151,7 +151,7 @@ In the aftermath of a disaster, centralized communication infrastructure is the 
 
 *   🗺️ **Offline Maps**: *Ground truth is always visible.* Pre-fetched tiles and an MBTiles provider mean mapping is fully functional without internet.
 *   🧭 **Offline Routing via OSRM**: *Navigating around hazards in a dead zone.* Powered by a local Docker-based OSRM engine utilizing OpenStreetMap data entirely offline.
-*   📡 **P2P Incident Sync via libp2p**: *Information spreads like fire across the network.* Leverages robust GossipSub mesh networking to automatically broadcast incident reports to nearby peers.
+*   📡 **P2P Incident Sync via libp2p**: *Information spreads like fire across the network.* Leverages robust GossipSub mesh networking to automatically broadcast incident reports to nearby peers .
 *   🔗 **CRDT Conflict Resolution**: *Multiple chaotic updates condense into one truth.* Uses Conflict-free Replicated Data Types (CRDTs) to ensure eventual consistency locally without ever touching a central server.
 *   ⚠️ **Deterministic Danger Zones**: *Universal situational awareness.* Hazard polygons are computed identically across all devices using pure geometric functions, ensuring safety bounds match without network overhead.
 
