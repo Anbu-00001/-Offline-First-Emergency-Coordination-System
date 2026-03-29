@@ -1,22 +1,36 @@
 buildscript {
-    val kotlin_version by extra("1.9.0")
+    val kotlin_version by extra("2.0.0")
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.3.2")
+        classpath("com.android.tools.build:gradle:8.4.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
     }
 }
 
 allprojects {
-    extra.set("kotlin_version", "1.9.0")
+    configurations.all {
+        resolutionStrategy {
+            eachDependency {
+                if (requested.group == "androidx.core" && requested.name.startsWith("core")) {
+                    useVersion("1.12.0")
+                }
+                if (requested.group == "org.jetbrains.kotlin") {
+                    useVersion("2.0.0")
+                }
+            }
+        }
+    }
+    extra.set("kotlin_version", "2.0.0")
     repositories {
         google()
         mavenCentral()
     }
 }
+
+apply(from = "java17.gradle")
 
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
@@ -34,4 +48,13 @@ subprojects {
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
+}
+
+subprojects {
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+            freeCompilerArgs += listOf("-Xskip-metadata-version-check")
+        }
+    }
 }

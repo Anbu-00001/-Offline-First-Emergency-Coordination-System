@@ -76,8 +76,13 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    _initTileUrl();
-    _startLocationUpdates();
+    print("App started");
+    print("Map loaded");
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initTileUrl();
+      _startLocationUpdates();
+    });
   }
 
   void _startLocationUpdates() {
@@ -220,6 +225,7 @@ class _MapScreenState extends State<MapScreen> {
       final locService = context.read<LocationService>();
       final start = await locService.getCurrentLocation();
       if (start != null && mounted) {
+        print("Incident tapped → routing triggered");
         context.read<RouteController>().requestRoute(
           start: start,
           end: LatLng(incident.lat, incident.lon),
@@ -792,6 +798,7 @@ class _MapScreenState extends State<MapScreen> {
                                     padding: const EdgeInsets.all(40),
                                   ),
                                 );
+                                if (mounted) setState(() {}); // Force UI update
                               });
                             }
 

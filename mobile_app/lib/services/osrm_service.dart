@@ -32,11 +32,20 @@ class OSRMService {
           '&annotations=false&alternatives=$alternatives';
 
       final uri = Uri.parse(uriStr);
-      final response = await _client.get(uri);
+      print("Routing request → $uriStr");
+      print("Routing started");
+      final response = await _client.get(uri).timeout(const Duration(seconds: 5));
+
+      print("Routing response → ${response.statusCode}");
+      print("Body → ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return RouteResult.fromOsrmJsonList(data);
+        final results = RouteResult.fromOsrmJsonList(data);
+        if (results.isNotEmpty) {
+          print("Route points count → ${results.first.geometry.length}");
+        }
+        return results;
       } else {
         debugPrint(
             'OSRMService: Failed to fetch route. Status: ${response.statusCode}');

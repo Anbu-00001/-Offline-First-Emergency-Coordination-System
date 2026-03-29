@@ -42,7 +42,7 @@ void main() async {
   final db = AppDatabase();
   final p2pService = P2PService(hostUrl: baseUrl);
   // Start the background connection to the local node
-  p2pService.connect();
+  // p2pService.connect();
   final wsService = WsService(baseUrl, authService, db);
   final mapService = MapService();
 

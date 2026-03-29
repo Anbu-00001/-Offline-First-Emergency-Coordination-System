@@ -45,6 +45,7 @@ class RouteController {
     required LatLng start,
     required LatLng end,
   }) async {
+    print("Requesting route from $start to $end");
     // Clear previous route immediately
     _routeStreamController.add(null);
 

@@ -55,12 +55,13 @@ class ResponderController {
       debugPrint('Starting tile prefetch for radius');
       
       try {
-        await _prefetchService.prefetchAroundLocation(
-          location,
-          5000.0, // 5km radius
-          14,     // minZoom
-          16,     // maxZoom
-        );
+        // Temp disable tile prefetch auto-trigger for isolation test
+        // await _prefetchService.prefetchAroundLocation(
+        //   location,
+        //   5000.0, // 5km radius
+        //   14,     // minZoom
+        //   16,     // maxZoom
+        // );
       } catch (e) {
         debugPrint('ResponderController: Failed to start prefetch: $e');
       }

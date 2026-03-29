@@ -17,9 +17,12 @@ from app.api.routes.ws import register_ws_events
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
+    title="OpenRescue API",
     version=settings.VERSION,
     description="OpenRescue Decentralized Emergency System API",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 app.add_middleware(
@@ -147,6 +150,10 @@ async def shutdown_event() -> None:
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": settings.PROJECT_NAME}
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
 
 class XMLPayload(BaseModel):
     xml_data: str

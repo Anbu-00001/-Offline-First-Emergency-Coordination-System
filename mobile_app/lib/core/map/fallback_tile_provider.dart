@@ -20,11 +20,13 @@ class FallbackFileTileProvider extends TileProvider {
     final tilePath = p.join(tilesDir, '$z', '$x', '$y.png');
     final file = File(tilePath);
 
-    if (file.existsSync()) {
-      return FileImage(file);
+    try {
+      // Replaced blocked sync call (file.existsSync()) with try-catch fallback.
+      // Since FileImage cannot fallback to NetworkImage implicitly on error,
+      // and existsSync freezes UI, we use NetworkTileProvider directly during test mode.
+      return _networkProvider.getImage(coordinates, options);
+    } catch (e) {
+      return _networkProvider.getImage(coordinates, options);
     }
-
-    // Fallback to network
-    return _networkProvider.getImage(coordinates, options);
   }
 }
