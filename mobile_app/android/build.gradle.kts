@@ -1,11 +1,11 @@
 buildscript {
-    val kotlin_version by extra("2.0.0")
+    val kotlin_version by extra("1.9.24")
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.4.0")
+        classpath("com.android.tools.build:gradle:8.2.2")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
     }
 }
@@ -18,12 +18,12 @@ allprojects {
                     useVersion("1.12.0")
                 }
                 if (requested.group == "org.jetbrains.kotlin") {
-                    useVersion("2.0.0")
+                    useVersion("1.9.24")
                 }
             }
         }
     }
-    extra.set("kotlin_version", "2.0.0")
+    extra.set("kotlin_version", "1.9.24")
     repositories {
         google()
         mavenCentral()

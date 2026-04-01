@@ -70,7 +70,12 @@ class RouteController {
 
       // 3. Fetch from RoutingService
       debugPrint('RouteController: Fetching initial route from RoutingService');
-      final initialRoutes = await _routingService.getRoute(start, end, alternatives: false);
+      List<RouteResult> initialRoutes = [];
+      try {
+        initialRoutes = await _routingService.getRoute(start, end, alternatives: false);
+      } catch (e) {
+        debugPrint("Routing failed: $e");
+      }
 
       if (initialRoutes.isEmpty) {
         _routeStreamController.add(null);
@@ -93,7 +98,12 @@ class RouteController {
       debugPrint('ROUTE_MARKED_UNSAFE');
       debugPrint('RouteController: Requesting alternatives...');
       
-      final alternateRoutes = await _routingService.getRoute(start, end, alternatives: true);
+      List<RouteResult> alternateRoutes = [];
+      try {
+        alternateRoutes = await _routingService.getRoute(start, end, alternatives: true);
+      } catch (e) {
+        debugPrint("Routing failed: $e");
+      }
 
       // Evaluate each alternative
       for (final route in alternateRoutes) {

@@ -53,6 +53,7 @@ void main() async {
     repo: tilesRepo,
     mapService: mapService,
   );
+  // tilePrefetchService.start();
   final prefetchController = PrefetchController(prefetchService);
 
   // 4. Responder System
