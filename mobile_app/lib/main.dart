@@ -41,10 +41,6 @@ void main() async {
   final apiClient = ApiClient(baseUrl: baseUrl, authService: authService);
   final db = AppDatabase();
   final p2pService = P2PService(hostUrl: baseUrl);
-  // Start the background connection to the local node
-  Future(() async {
-    p2pService.connect();
-  });
   final wsService = WsService(baseUrl, authService, db);
   final mapService = MapService();
 
@@ -55,8 +51,9 @@ void main() async {
     repo: tilesRepo,
     mapService: mapService,
   );
-  Future(() async {
-    await prefetchService.resumePendingJobs();
+  Future.delayed(const Duration(seconds: 2), () {
+    p2pService.connect();
+    prefetchService.resumePendingJobs();
   });
   final prefetchController = PrefetchController(prefetchService);
 

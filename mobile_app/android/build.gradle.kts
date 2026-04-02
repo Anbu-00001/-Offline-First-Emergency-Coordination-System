@@ -5,18 +5,17 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.2.2")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
+        classpath("com.android.tools.build:gradle:8.3.2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
     }
 }
 
 allprojects {
     configurations.all {
         resolutionStrategy {
+            force("androidx.core:core:1.13.1")
+            force("androidx.core:core-ktx:1.13.1")
             eachDependency {
-                if (requested.group == "androidx.core" && requested.name.startsWith("core")) {
-                    useVersion("1.12.0")
-                }
                 if (requested.group == "org.jetbrains.kotlin") {
                     useVersion("1.9.24")
                 }

@@ -79,6 +79,7 @@ class _PrefetchScreenState extends State<PrefetchScreen> {
                             fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
                     TextField(
+                      autofocus: false,
                       controller: _radiusController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
@@ -94,6 +95,7 @@ class _PrefetchScreenState extends State<PrefetchScreen> {
                       children: [
                         Expanded(
                           child: TextField(
+                            autofocus: false,
                             controller: _minZoomController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
@@ -106,6 +108,7 @@ class _PrefetchScreenState extends State<PrefetchScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
+                            autofocus: false,
                             controller: _maxZoomController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(

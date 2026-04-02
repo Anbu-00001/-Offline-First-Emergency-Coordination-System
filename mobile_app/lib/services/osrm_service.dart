@@ -24,12 +24,13 @@ class OSRMService {
     bool alternatives = false,
   }) async {
     try {
-      final baseUrl = baseUrlOverride ?? AppConfig.osrmBaseUrl;
+      final baseUrl = "http://192.168.1.105:5000";
       final uriStr = '$baseUrl/route/v1/driving/'
           '${start.longitude},${start.latitude};'
           '${end.longitude},${end.latitude}'
           '?overview=full&geometries=polyline6&steps=true'
           '&annotations=false&alternatives=$alternatives';
+      print("Calling OSRM: $uriStr");
 
       final uri = Uri.parse(uriStr);
       print("Calling OSRM...");

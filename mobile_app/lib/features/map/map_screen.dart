@@ -768,12 +768,10 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                       children: [
                         TileLayer(
-                          urlTemplate: _tileUrl!,
+                          urlTemplate: _tilesDir != null ? '$_tilesDir/{z}/{x}/{y}.png' : _tileUrl!,
                           userAgentPackageName: 'org.openrescue.mobile',
                           maxZoom: 19,
-                          tileProvider: _tilesDir != null 
-                              ? FallbackFileTileProvider(tilesDir: _tilesDir!)
-                              : NetworkTileProvider(),
+                          tileProvider: FileTileProvider(),
                         ),
                         StreamBuilder<ResponderState>(
                           stream: context.read<ResponderStateService>().stateStream,
@@ -983,17 +981,21 @@ class _CreateIncidentFormState extends State<_CreateIncidentForm> {
               ),
             ),
           TextField(
+              autofocus: false,
               controller: _typeController,
               decoration: const InputDecoration(labelText: 'Type')),
           TextField(
+              autofocus: false,
               controller: _priorityController,
               decoration: const InputDecoration(labelText: 'Priority')),
           if (widget.initialLat == null) ...[
             TextField(
+                autofocus: false,
                 controller: _latController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Latitude')),
             TextField(
+                autofocus: false,
                 controller: _lonController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Longitude')),
